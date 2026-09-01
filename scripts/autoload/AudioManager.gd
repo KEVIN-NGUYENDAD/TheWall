@@ -15,9 +15,9 @@ func _ready() -> void:
 		add_child(p)
 		_voices.append(p)
 
-	_cache["jump"] = _make_tone(520.0, 0.12, 0.35)
+	_cache["jump"] = _make_sweep(440.0, 900.0, 0.15, 0.35)
 	_cache["coin"] = _make_tone(1046.0, 0.08, 0.3)
-	_cache["checkpoint"] = _make_chime([523.0, 659.0, 880.0], 0.11, 0.32)
+	_cache["checkpoint"] = _make_chime([523.0, 659.0, 784.0, 1046.5], 0.1, 0.34)
 	_cache["death"] = _make_tone(160.0, 0.35, 0.35)
 	_cache["click"] = _make_tone(740.0, 0.05, 0.25)
 	_cache["unlock"] = _make_chime([523.0, 659.0, 784.0], 0.1, 0.3)

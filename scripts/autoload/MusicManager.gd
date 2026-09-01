@@ -161,7 +161,7 @@ func _make_sky_track() -> AudioStreamWAV:
 # THE VOID — mysterious, epic, tension. Low dissonant interval, deep driving kick, sudden stings.
 func _make_void_track() -> AudioStreamWAV:
 	var duration: float = 8.0
-	var freqs: Array = [98.00, 103.83, 146.83, 195.99]
+	var freqs: Array = [98.00, 116.54, 146.83, 195.99]
 	var q_freqs: Array = []
 	for f in freqs:
 		q_freqs.append(_quantize_freq(f, duration))

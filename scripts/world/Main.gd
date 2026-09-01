@@ -59,29 +59,29 @@ const ZONE_VOID_START_M: float = 500.0
 const VOID_INTENSITY_CAP_M: float = 1500.0
 const ZONE_TRANSITION_TIME: float = 2.5
 
-const RUINS_PLATFORM_COLOR: Color = Color(0.55, 0.56, 0.62, 1)
-const SKY_PLATFORM_COLOR: Color = Color(0.65, 0.75, 0.9, 1)
-const VOID_PLATFORM_COLOR: Color = Color(0.3, 0.28, 0.36, 1)
+const RUINS_PLATFORM_COLOR: Color = Color(0.95, 0.6, 0.3, 1)
+const SKY_PLATFORM_COLOR: Color = Color(0.35, 0.8, 1.0, 1)
+const VOID_PLATFORM_COLOR: Color = Color(0.78, 0.42, 0.92, 1)
 
 const ZONE_SKY_COLORS: Dictionary = {
-	0: Color(0.13, 0.15, 0.22, 1),
-	1: Color(0.55, 0.72, 0.88, 1),
-	2: Color(0.03, 0.03, 0.06, 1),
+	0: Color(0.45, 0.78, 0.98, 1),
+	1: Color(0.3, 0.65, 1.0, 1),
+	2: Color(0.6, 0.4, 0.85, 1),
 }
 const ZONE_MOUNTAIN_COLORS: Dictionary = {
-	0: Color(0.22, 0.25, 0.35, 1),
-	1: Color(0.6, 0.72, 0.85, 1),
-	2: Color(0.07, 0.06, 0.11, 1),
+	0: Color(0.98, 0.78, 0.48, 1),
+	1: Color(0.75, 0.9, 1.0, 1),
+	2: Color(0.8, 0.55, 0.95, 1),
 }
 const ZONE_HILL_COLORS: Dictionary = {
-	0: Color(0.28, 0.32, 0.44, 1),
-	1: Color(0.7, 0.8, 0.9, 1),
-	2: Color(0.1, 0.09, 0.15, 1),
+	0: Color(1.0, 0.86, 0.55, 1),
+	1: Color(0.85, 0.95, 1.0, 1),
+	2: Color(0.88, 0.68, 1.0, 1),
 }
 const ZONE_CLOUD_COLORS: Dictionary = {
-	0: Color(0.9, 0.92, 0.96, 0.45),
-	1: Color(1.0, 1.0, 1.0, 0.75),
-	2: Color(0.3, 0.28, 0.4, 0.25),
+	0: Color(1.0, 1.0, 0.96, 0.85),
+	1: Color(1.0, 1.0, 1.0, 0.9),
+	2: Color(0.97, 0.9, 1.0, 0.75),
 }
 
 @onready var player: CharacterBody2D = $Player
@@ -97,7 +97,8 @@ const ZONE_CLOUD_COLORS: Dictionary = {
 ]
 @onready var hills: Array = [$ParallaxBackground/Mid/Hill1, $ParallaxBackground/Mid/Hill2]
 @onready var clouds: Array = [
-	$ParallaxBackground/Near/Cloud1, $ParallaxBackground/Near/Cloud2, $ParallaxBackground/Near/Cloud3,
+	$ParallaxBackground/Near/Cloud1, $ParallaxBackground/Near/Cloud2,
+	$ParallaxBackground/Near/Cloud3, $ParallaxBackground/Near/Cloud4,
 ]
 
 var spawn_position: Vector2
@@ -110,7 +111,7 @@ var checkpoints_this_run: int = 0
 var checkpoints: Array = []
 var tutorial_hidden: bool = false
 var current_zone: int = 0
-var current_sky_color: Color = Color(0.13, 0.15, 0.22, 1)
+var current_sky_color: Color = Color(0.45, 0.78, 0.98, 1)
 var active_markers: Array = []
 var bonus_height_m: float = 0.0
 var cloud_drift_t: float = 0.0
@@ -193,9 +194,9 @@ func _spawn_platform_variant(i: int, x: float, y: float, height: float) -> Node:
 	platform.position = Vector2(x, y)
 	add_child(platform)
 
-	if is_normal:
+	if is_normal or scene == FAKE_PLATFORM_SCENE:
 		_apply_zone_platform_color(platform, height)
-		if i > 0 and height >= SAFE_ZONE_HEIGHT_M and randf() < NEST_CHANCE:
+		if is_normal and i > 0 and height >= SAFE_ZONE_HEIGHT_M and randf() < NEST_CHANCE:
 			_spawn_nest(Vector2(x, y - 40.0))
 
 	return platform
@@ -537,6 +538,9 @@ func _on_checkpoint_activated(checkpoint: Node) -> void:
 	AudioManager.play("checkpoint")
 	hud.show_toast("Checkpoint! %dm" % checkpoint.height_meters)
 	player.shake_camera(CHECKPOINT_SHAKE_STRENGTH, CHECKPOINT_SHAKE_DURATION)
+	_spawn_particle_burst(checkpoint.global_position, Color(1.0, 0.3, 0.3, 0.95), 6, 130.0, 0.5)
+	_spawn_particle_burst(checkpoint.global_position, Color(1.0, 0.85, 0.2, 0.95), 6, 150.0, 0.55)
+	_spawn_particle_burst(checkpoint.global_position, Color(0.3, 0.7, 1.0, 0.95), 6, 140.0, 0.5)
 
 
 func _nearest_checkpoint_distance(height: float) -> float:
