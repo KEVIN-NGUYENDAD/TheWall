@@ -4,8 +4,8 @@ const MIX_RATE: int = 22050
 const FADE_RATE_DB: float = 24.0
 const SILENT_DB: float = -80.0
 
-const ZONE_BASE_DB: Array = [-9.0, -7.0, -10.0]
-const ZONE_PEAK_DB: Array = [-3.0, -1.0, -4.0]
+const ZONE_BASE_DB: Array = [-7.0, -5.0, -8.0]
+const ZONE_PEAK_DB: Array = [-1.0, 1.0, -2.0]
 
 var players: Array = []
 var current_zone: int = 0
@@ -84,7 +84,14 @@ func _click(t: float, click_rate: float, click_freq: float, decay: float, depth:
 	return sin(TAU * click_freq * t) * env * depth
 
 
-# THE RUINS — brighter, adventurous, energetic. Bright major chord with a bouncy pulse.
+# A low, punchy "kick" thump repeating at kick_rate (quantized to the loop duration).
+func _kick(t: float, kick_rate: float, kick_freq: float, decay: float, depth: float) -> float:
+	var phase: float = fmod(t * kick_rate, 1.0)
+	var env: float = exp(-phase * decay)
+	return sin(TAU * kick_freq * t) * env * depth
+
+
+# THE RUINS — brighter, adventurous, energetic. Bright major chord, driving kick + pulse.
 func _make_ruins_track() -> AudioStreamWAV:
 	var duration: float = 4.0
 	var freqs: Array = [261.63, 329.63, 392.00, 523.25]
@@ -94,6 +101,8 @@ func _make_ruins_track() -> AudioStreamWAV:
 	var pulse_rate: float = _quantize_freq(2.5, duration)
 	var click_rate: float = _quantize_freq(2.5, duration)
 	var click_freq: float = _quantize_freq(1046.5, duration)
+	var kick_rate: float = _quantize_freq(1.25, duration)
+	var kick_freq: float = _quantize_freq(70.0, duration)
 
 	var sample_count: int = int(MIX_RATE * duration)
 	var data := PackedByteArray()
@@ -105,15 +114,16 @@ func _make_ruins_track() -> AudioStreamWAV:
 			sample += sin(TAU * f * t)
 		sample /= q_freqs.size()
 		var pulse_phase: float = fmod(t * pulse_rate, 1.0)
-		var pulse: float = 1.0 + 0.3 * exp(-pulse_phase * 8.0)
-		var click: float = _click(t, click_rate, click_freq, 30.0, 0.12)
-		var v: float = sample * 0.24 * pulse + click
+		var pulse: float = 1.0 + 0.4 * exp(-pulse_phase * 8.0)
+		var click: float = _click(t, click_rate, click_freq, 30.0, 0.16)
+		var kick: float = _kick(t, kick_rate, kick_freq, 12.0, 0.35)
+		var v: float = sample * 0.28 * pulse + click + kick
 		data.encode_s16(i * 2, int(clamp(v, -1.0, 1.0) * 32767.0))
 
 	return _build_stream(data, sample_count)
 
 
-# THE SKY — uplifting, exciting, stronger rhythm. Bright open chord with a driving double pulse.
+# THE SKY — uplifting, exciting, stronger rhythm. Bright open chord, fast driving kick + pulse.
 func _make_sky_track() -> AudioStreamWAV:
 	var duration: float = 3.0
 	var freqs: Array = [293.66, 369.99, 440.00, 587.33]
@@ -125,6 +135,8 @@ func _make_sky_track() -> AudioStreamWAV:
 	var click_freq: float = _quantize_freq(1568.0, duration)
 	var accent_rate: float = _quantize_freq(2.0, duration)
 	var accent_freq: float = _quantize_freq(880.0, duration)
+	var kick_rate: float = _quantize_freq(2.0, duration)
+	var kick_freq: float = _quantize_freq(75.0, duration)
 
 	var sample_count: int = int(MIX_RATE * duration)
 	var data := PackedByteArray()
@@ -136,16 +148,17 @@ func _make_sky_track() -> AudioStreamWAV:
 			sample += sin(TAU * f * t)
 		sample /= q_freqs.size()
 		var pulse_phase: float = fmod(t * pulse_rate, 1.0)
-		var pulse: float = 1.0 + 0.4 * exp(-pulse_phase * 9.0)
-		var click: float = _click(t, click_rate, click_freq, 35.0, 0.14)
-		var accent: float = _click(t, accent_rate, accent_freq, 15.0, 0.1)
-		var v: float = sample * 0.24 * pulse + click + accent
+		var pulse: float = 1.0 + 0.5 * exp(-pulse_phase * 9.0)
+		var click: float = _click(t, click_rate, click_freq, 35.0, 0.18)
+		var accent: float = _click(t, accent_rate, accent_freq, 15.0, 0.12)
+		var kick: float = _kick(t, kick_rate, kick_freq, 12.0, 0.4)
+		var v: float = sample * 0.28 * pulse + click + accent + kick
 		data.encode_s16(i * 2, int(clamp(v, -1.0, 1.0) * 32767.0))
 
 	return _build_stream(data, sample_count)
 
 
-# THE VOID — mysterious, epic, tension. Low dissonant interval with a driving, syncopated pulse.
+# THE VOID — mysterious, epic, tension. Low dissonant interval, deep driving kick, sudden stings.
 func _make_void_track() -> AudioStreamWAV:
 	var duration: float = 8.0
 	var freqs: Array = [98.00, 103.83, 146.83, 195.99]
@@ -156,6 +169,8 @@ func _make_void_track() -> AudioStreamWAV:
 	var sting_rate: float = _quantize_freq(0.375, duration)
 	var sting_freq: float = _quantize_freq(220.0, duration)
 	var wobble_hz: float = _quantize_freq(0.2, duration)
+	var kick_rate: float = _quantize_freq(0.75, duration)
+	var kick_freq: float = _quantize_freq(55.0, duration)
 
 	var sample_count: int = int(MIX_RATE * duration)
 	var data := PackedByteArray()
@@ -167,10 +182,11 @@ func _make_void_track() -> AudioStreamWAV:
 			sample += sin(TAU * f * t)
 		sample /= q_freqs.size()
 		var pulse_phase: float = fmod(t * pulse_rate, 1.0)
-		var pulse: float = 1.0 + 0.35 * exp(-pulse_phase * 6.0)
-		var sting: float = _click(t, sting_rate, sting_freq, 8.0, 0.16)
+		var pulse: float = 1.0 + 0.4 * exp(-pulse_phase * 6.0)
+		var sting: float = _click(t, sting_rate, sting_freq, 7.0, 0.22)
+		var kick: float = _kick(t, kick_rate, kick_freq, 8.0, 0.45)
 		var tremor: float = 1.0 + 0.15 * sin(TAU * wobble_hz * t)
-		var v: float = (sample * 0.22 * pulse * tremor) + sting
+		var v: float = (sample * 0.26 * pulse * tremor) + sting + kick
 		data.encode_s16(i * 2, int(clamp(v, -1.0, 1.0) * 32767.0))
 
 	return _build_stream(data, sample_count)

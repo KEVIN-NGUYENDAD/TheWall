@@ -258,9 +258,9 @@ func _set_sky_color(color: Color) -> void:
 
 
 func _update_cloud_drift(delta: float) -> void:
-	cloud_drift_t += delta * 0.15
+	cloud_drift_t += delta * 0.3
 	for idx in range(clouds.size()):
-		clouds[idx].position.x = sin(cloud_drift_t + idx * 2.1) * 20.0
+		clouds[idx].position.x = sin(cloud_drift_t + idx * 2.1) * 40.0
 
 
 func _spawn_coin(pos: Vector2) -> void:
@@ -349,7 +349,7 @@ func _setup_ambience_timers() -> void:
 	common_bird_timer.one_shot = true
 	add_child(common_bird_timer)
 	common_bird_timer.timeout.connect(_on_common_bird_timer)
-	_restart_timer(common_bird_timer, 4.0, 7.0)
+	_restart_timer(common_bird_timer, 2.5, 5.0)
 
 	special_bird_timer = Timer.new()
 	special_bird_timer.one_shot = true
@@ -392,7 +392,7 @@ func _on_common_bird_timer() -> void:
 	if not is_dead:
 		var from_left: bool = randf() < 0.5
 		_spawn_common_bird_from(_bird_spawn_position(from_left), 1.0 if from_left else -1.0)
-	_restart_timer(common_bird_timer, 4.0, 7.0)
+	_restart_timer(common_bird_timer, 2.5, 5.0)
 
 
 func _on_special_bird_timer() -> void:
