@@ -72,8 +72,9 @@ func _body_polygon() -> PackedVector2Array:
 
 func _draw() -> void:
 	if not _diving:
-		var pulse: float = 0.6 + 0.4 * sin(_telegraph_t * TAU * 3.0)
-		draw_circle(Vector2.ZERO, 38.0, Color(WARNING_COLOR.r, WARNING_COLOR.g, WARNING_COLOR.b, 0.25 * pulse), true, -1.0, true)
+		var pulse: float = 0.55 + 0.45 * sin(_telegraph_t * TAU * 2.0)
+		draw_circle(Vector2.ZERO, 46.0, Color(WARNING_COLOR.r, WARNING_COLOR.g, WARNING_COLOR.b, 0.4 * pulse), true, -1.0, true)
+		draw_circle(Vector2.ZERO, 30.0, Color(WARNING_COLOR.r, WARNING_COLOR.g, WARNING_COLOR.b, 0.2 * pulse), true, -1.0, true)
 
 		var flap: float = sin(_telegraph_t * TAU * 4.0)
 		var spread: float = 18.0 + flap * 8.0

@@ -59,30 +59,32 @@ const ZONE_VOID_START_M: float = 500.0
 const VOID_INTENSITY_CAP_M: float = 1500.0
 const ZONE_TRANSITION_TIME: float = 2.5
 
-const RUINS_PLATFORM_COLOR: Color = Color(0.95, 0.6, 0.3, 1)
-const SKY_PLATFORM_COLOR: Color = Color(0.35, 0.8, 1.0, 1)
-const VOID_PLATFORM_COLOR: Color = Color(0.78, 0.42, 0.92, 1)
+const RUINS_PLATFORM_COLOR: Color = Color(0.4, 0.78, 0.4, 1)
+const SKY_PLATFORM_COLOR: Color = Color(1.0, 0.82, 0.3, 1)
+const VOID_PLATFORM_COLOR: Color = Color(0.62, 0.48, 0.95, 1)
 
 const ZONE_SKY_COLORS: Dictionary = {
-	0: Color(0.45, 0.78, 0.98, 1),
-	1: Color(0.3, 0.65, 1.0, 1),
-	2: Color(0.6, 0.4, 0.85, 1),
+	0: Color(0.5, 0.8, 0.98, 1),
+	1: Color(0.25, 0.6, 1.0, 1),
+	2: Color(0.4, 0.35, 0.85, 1),
 }
 const ZONE_MOUNTAIN_COLORS: Dictionary = {
-	0: Color(0.98, 0.78, 0.48, 1),
-	1: Color(0.75, 0.9, 1.0, 1),
-	2: Color(0.8, 0.55, 0.95, 1),
+	0: Color(0.45, 0.8, 0.5, 1),
+	1: Color(0.55, 0.75, 1.0, 1),
+	2: Color(0.55, 0.45, 0.9, 1),
 }
 const ZONE_HILL_COLORS: Dictionary = {
-	0: Color(1.0, 0.86, 0.55, 1),
-	1: Color(0.85, 0.95, 1.0, 1),
-	2: Color(0.88, 0.68, 1.0, 1),
+	0: Color(0.55, 0.85, 0.5, 1),
+	1: Color(0.7, 0.85, 1.0, 1),
+	2: Color(0.65, 0.55, 0.95, 1),
 }
 const ZONE_CLOUD_COLORS: Dictionary = {
-	0: Color(1.0, 1.0, 0.96, 0.85),
-	1: Color(1.0, 1.0, 1.0, 0.9),
-	2: Color(0.97, 0.9, 1.0, 0.75),
+	0: Color(1.0, 1.0, 1.0, 1.0),
+	1: Color(1.0, 1.0, 1.0, 1.0),
+	2: Color(0.95, 0.92, 1.0, 0.85),
 }
+const CLOUD_DRIFT_SPEED: float = 16.0
+const CLOUD_DRIFT_RANGE: float = 620.0
 
 @onready var player: CharacterBody2D = $Player
 @onready var hud = $HUD
@@ -111,7 +113,7 @@ var checkpoints_this_run: int = 0
 var checkpoints: Array = []
 var tutorial_hidden: bool = false
 var current_zone: int = 0
-var current_sky_color: Color = Color(0.45, 0.78, 0.98, 1)
+var current_sky_color: Color = Color(0.5, 0.8, 0.98, 1)
 var active_markers: Array = []
 var bonus_height_m: float = 0.0
 var cloud_drift_t: float = 0.0
@@ -259,9 +261,11 @@ func _set_sky_color(color: Color) -> void:
 
 
 func _update_cloud_drift(delta: float) -> void:
-	cloud_drift_t += delta * 0.3
+	cloud_drift_t += delta
 	for idx in range(clouds.size()):
-		clouds[idx].position.x = sin(cloud_drift_t + idx * 2.1) * 40.0
+		var scroll: float = fmod(cloud_drift_t * CLOUD_DRIFT_SPEED + idx * 155.0, CLOUD_DRIFT_RANGE) - CLOUD_DRIFT_RANGE / 2.0
+		var bob: float = sin(cloud_drift_t * 0.6 + idx * 2.1) * 16.0
+		clouds[idx].position = Vector2(scroll, bob)
 
 
 func _spawn_coin(pos: Vector2) -> void:

@@ -9,6 +9,7 @@
 [ext_resource type="PackedScene" path="res://scenes/ui/MemoryOverlay.tscn" id="7"]
 [ext_resource type="PackedScene" path="res://scenes/world/WindLayer.tscn" id="8"]
 [ext_resource type="PackedScene" path="res://scenes/world/SunRays.tscn" id="9"]
+[ext_resource type="PackedScene" path="res://scenes/world/SparkleField.tscn" id="10"]
 
 [node name="Main" type="Node2D"]
 script = ExtResource("1")
@@ -23,32 +24,32 @@ motion_mirroring = Vector2(0, 960)
 position = Vector2(400, -150)
 
 [node name="Mountain1" type="Polygon2D" parent="ParallaxBackground/Far"]
-color = Color(0.98, 0.78, 0.48, 1)
+color = Color(0.45, 0.8, 0.5, 1)
 antialiased = true
 polygon = PackedVector2Array(0, 960, 0, 760, 120, 620, 260, 760, 260, 960)
 
 [node name="Mountain2" type="Polygon2D" parent="ParallaxBackground/Far"]
-color = Color(0.98, 0.78, 0.48, 1)
+color = Color(0.45, 0.8, 0.5, 1)
 antialiased = true
 polygon = PackedVector2Array(220, 960, 220, 700, 380, 520, 540, 700, 540, 960)
 
 [node name="Mountain3" type="Polygon2D" parent="ParallaxBackground/Far"]
-color = Color(0.98, 0.78, 0.48, 1)
+color = Color(0.45, 0.8, 0.5, 1)
 antialiased = true
 polygon = PackedVector2Array(420, 960, 420, 780, 540, 660, 540, 960)
 
 [node name="Mountain4" type="Polygon2D" parent="ParallaxBackground/Far"]
-color = Color(1.0, 0.82, 0.52, 1)
+color = Color(0.5, 0.82, 0.55, 1)
 antialiased = true
 polygon = PackedVector2Array(140, 960, 140, 840, 240, 740, 340, 840, 340, 960)
 
 [node name="Silhouette1" type="Polygon2D" parent="ParallaxBackground/Far"]
-color = Color(0.75, 0.55, 0.35, 0.35)
+color = Color(0.4, 0.55, 0.45, 0.3)
 antialiased = true
 polygon = PackedVector2Array(90, 900, 88, 860, 92, 840, 98, 840, 102, 860, 100, 900)
 
 [node name="Silhouette2" type="Polygon2D" parent="ParallaxBackground/Far"]
-color = Color(0.75, 0.55, 0.35, 0.3)
+color = Color(0.4, 0.55, 0.45, 0.25)
 antialiased = true
 polygon = PackedVector2Array(430, 910, 428, 875, 433, 858, 439, 858, 444, 875, 442, 910)
 
@@ -57,12 +58,12 @@ motion_scale = Vector2(0.5, 0.5)
 motion_mirroring = Vector2(0, 960)
 
 [node name="Hill1" type="Polygon2D" parent="ParallaxBackground/Mid"]
-color = Color(1.0, 0.86, 0.55, 1)
+color = Color(0.55, 0.85, 0.5, 1)
 antialiased = true
 polygon = PackedVector2Array(0, 960, 0, 840, 160, 760, 320, 840, 320, 960)
 
 [node name="Hill2" type="Polygon2D" parent="ParallaxBackground/Mid"]
-color = Color(1.0, 0.86, 0.55, 1)
+color = Color(0.55, 0.85, 0.5, 1)
 antialiased = true
 polygon = PackedVector2Array(260, 960, 260, 860, 440, 780, 540, 840, 540, 960)
 
@@ -71,24 +72,26 @@ motion_scale = Vector2(0.8, 0.8)
 motion_mirroring = Vector2(0, 960)
 
 [node name="Cloud1" type="Polygon2D" parent="ParallaxBackground/Near"]
-color = Color(1.0, 1.0, 0.96, 0.85)
+color = Color(1.0, 1.0, 1.0, 1.0)
 antialiased = true
 polygon = PackedVector2Array(40, 200, 90, 180, 140, 195, 160, 215, 120, 230, 60, 225)
 
 [node name="Cloud2" type="Polygon2D" parent="ParallaxBackground/Near"]
-color = Color(1.0, 1.0, 0.96, 0.85)
+color = Color(1.0, 1.0, 1.0, 1.0)
 antialiased = true
 polygon = PackedVector2Array(320, 560, 370, 540, 420, 555, 440, 575, 400, 590, 340, 585)
 
 [node name="Cloud3" type="Polygon2D" parent="ParallaxBackground/Near"]
-color = Color(1.0, 1.0, 0.96, 0.8)
+color = Color(1.0, 1.0, 1.0, 1.0)
 antialiased = true
 polygon = PackedVector2Array(160, 780, 205, 762, 250, 776, 268, 794, 232, 808, 178, 803)
 
 [node name="Cloud4" type="Polygon2D" parent="ParallaxBackground/Near"]
-color = Color(1.0, 1.0, 0.96, 0.8)
+color = Color(1.0, 1.0, 1.0, 1.0)
 antialiased = true
 polygon = PackedVector2Array(380, 300, 420, 282, 465, 296, 480, 314, 445, 328, 395, 322)
+
+[node name="SparkleField" parent="ParallaxBackground/Near" instance=ExtResource("10")]
 
 [node name="ShapeAbove" parent="." instance=ExtResource("6")]
 

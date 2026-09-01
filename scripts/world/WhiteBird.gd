@@ -6,7 +6,7 @@ const SPEED: float = 105.0
 const LIFETIME: float = 12.0
 const HEIGHT_BONUS_M: float = 5.0
 const COLOR: Color = Color(1.0, 1.0, 0.98, 1.0)
-const GLOW_COLOR: Color = Color(1.0, 0.95, 0.6, 0.3)
+const GLOW_COLOR: Color = Color(1.0, 0.95, 0.6, 0.5)
 const TRAIL_LENGTH: int = 10
 const TRAIL_COLORS: Array = [
 	Color(1.0, 0.5, 0.5), Color(1.0, 0.85, 0.4), Color(0.6, 1.0, 0.6),
@@ -61,7 +61,9 @@ func _draw() -> void:
 		var c: Color = TRAIL_COLORS[i % TRAIL_COLORS.size()]
 		draw_circle(local_pos, size, Color(c.r, c.g, c.b, alpha), true, -1.0, true)
 
-	draw_circle(Vector2.ZERO, 30.0, GLOW_COLOR, true, -1.0, true)
+	var pulse: float = 0.75 + 0.25 * sin(_t * 2.0)
+	draw_circle(Vector2.ZERO, 42.0 * pulse, Color(GLOW_COLOR.r, GLOW_COLOR.g, GLOW_COLOR.b, GLOW_COLOR.a * 0.5), true, -1.0, true)
+	draw_circle(Vector2.ZERO, 26.0 * pulse, GLOW_COLOR, true, -1.0, true)
 
 	var flap: float = sin(_t)
 	var lift: float = flap * 10.0
