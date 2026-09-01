@@ -1,4 +1,4 @@
-[gd_scene load_steps=7 format=3]
+[gd_scene load_steps=8 format=3]
 
 [ext_resource type="Script" path="res://scripts/world/Main.gd" id="1"]
 [ext_resource type="PackedScene" path="res://scenes/player/Player.tscn" id="2"]
@@ -6,6 +6,7 @@
 [ext_resource type="PackedScene" path="res://scenes/ui/DeathScreen.tscn" id="4"]
 [ext_resource type="PackedScene" path="res://scenes/ui/TouchControls.tscn" id="5"]
 [ext_resource type="PackedScene" path="res://scenes/world/ShapeAbove.tscn" id="6"]
+[ext_resource type="PackedScene" path="res://scenes/ui/MemoryOverlay.tscn" id="7"]
 
 [node name="Main" type="Node2D"]
 script = ExtResource("1")
@@ -30,6 +31,11 @@ polygon = PackedVector2Array(220, 960, 220, 700, 380, 520, 540, 700, 540, 960)
 color = Color(0.22, 0.25, 0.35, 1)
 antialiased = true
 polygon = PackedVector2Array(420, 960, 420, 780, 540, 660, 540, 960)
+
+[node name="Mountain4" type="Polygon2D" parent="ParallaxBackground/Far"]
+color = Color(0.26, 0.29, 0.4, 1)
+antialiased = true
+polygon = PackedVector2Array(140, 960, 140, 840, 240, 740, 340, 840, 340, 960)
 
 [node name="Mid" type="ParallaxLayer" parent="ParallaxBackground"]
 motion_scale = Vector2(0.5, 0.5)
@@ -59,6 +65,11 @@ color = Color(0.9, 0.92, 0.96, 0.45)
 antialiased = true
 polygon = PackedVector2Array(320, 560, 370, 540, 420, 555, 440, 575, 400, 590, 340, 585)
 
+[node name="Cloud3" type="Polygon2D" parent="ParallaxBackground/Near"]
+color = Color(0.9, 0.92, 0.96, 0.4)
+antialiased = true
+polygon = PackedVector2Array(160, 780, 205, 762, 250, 776, 268, 794, 232, 808, 178, 803)
+
 [node name="ShapeAbove" parent="." instance=ExtResource("6")]
 
 [node name="Player" parent="." instance=ExtResource("2")]
@@ -68,3 +79,5 @@ polygon = PackedVector2Array(320, 560, 370, 540, 420, 555, 440, 575, 400, 590, 3
 [node name="TouchControls" parent="." instance=ExtResource("5")]
 
 [node name="DeathScreen" parent="." instance=ExtResource("4")]
+
+[node name="MemoryOverlay" parent="." instance=ExtResource("7")]

@@ -1,5 +1,8 @@
 extends CharacterBody2D
 
+signal landed_hard(land_position: Vector2)
+signal dashed(dash_position: Vector2, direction: float)
+
 const MOVE_SPEED: float = 220.0
 const GROUND_ACCEL: float = 1600.0
 const AIR_ACCEL: float = 900.0
@@ -38,8 +41,13 @@ var dash_direction: float = 0.0
 var last_left_tap_time: float = -10.0
 var last_right_tap_time: float = -10.0
 
+var shake_timer: float = 0.0
+var shake_total_duration: float = 1.0
+var shake_strength: float = 0.0
+
 @onready var collision_shape: CollisionShape2D = $CollisionShape2D
 @onready var visual: Node2D = $Visual
+@onready var camera: Camera2D = $Camera2D
 
 
 func _ready() -> void:
@@ -61,8 +69,25 @@ func _physics_process(delta: float) -> void:
 
 	if not was_on_floor and is_on_floor() and incoming_fall_speed > LAND_SPEED_THRESHOLD:
 		visual.scale = LAND_SQUASH
+		landed_hard.emit(global_position)
 
 	_update_visual(delta)
+	_update_shake(delta)
+
+
+func shake_camera(strength: float, duration: float) -> void:
+	shake_strength = strength
+	shake_timer = duration
+	shake_total_duration = duration
+
+
+func _update_shake(delta: float) -> void:
+	if shake_timer > 0.0:
+		shake_timer = max(shake_timer - delta, 0.0)
+		var decay: float = shake_timer / shake_total_duration
+		camera.offset = Vector2(randf_range(-1.0, 1.0), randf_range(-1.0, 1.0)) * shake_strength * decay
+	else:
+		camera.offset = Vector2.ZERO
 
 
 func _apply_gravity(delta: float) -> void:
@@ -103,6 +128,7 @@ func _start_dash(direction: float) -> void:
 	dash_direction = direction
 	visual.scale = DASH_STRETCH
 	AudioManager.play("dash")
+	dashed.emit(global_position, direction)
 
 
 func _handle_charge_and_jump(delta: float) -> void:

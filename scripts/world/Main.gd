@@ -3,10 +3,14 @@ extends Node2D
 const PIXELS_PER_METER: float = 50.0
 const PLATFORM_COUNT: int = 360
 const PLATFORM_SCENE: PackedScene = preload("res://scenes/world/Platform.tscn")
+const MOVING_PLATFORM_SCENE: PackedScene = preload("res://scenes/world/MovingPlatform.tscn")
+const COLLAPSING_PLATFORM_SCENE: PackedScene = preload("res://scenes/world/CollapsingPlatform.tscn")
+const FAKE_PLATFORM_SCENE: PackedScene = preload("res://scenes/world/FakePlatform.tscn")
 const CHECKPOINT_SCENE: PackedScene = preload("res://scenes/world/Checkpoint.tscn")
 const COIN_SCENE: PackedScene = preload("res://scenes/world/Coin.tscn")
 const SPIKE_SCENE: PackedScene = preload("res://scenes/world/Spike.tscn")
 const DEATH_MARKER_SCENE: PackedScene = preload("res://scenes/world/DeathMarker.tscn")
+const PARTICLE_BURST_SCENE: PackedScene = preload("res://scenes/effects/ParticleBurst.tscn")
 
 const VIEWPORT_WIDTH: float = 540.0
 const EDGE_MARGIN: float = 90.0
@@ -20,19 +24,26 @@ const SPIKE_CHANCE: float = 0.1
 const SPIKE_SAFE_PLATFORM_COUNT: int = 5
 const NEAR_MISS_METERS: float = 5.0
 
-const MEMORY_HEIGHTS: Array = [100, 300, 700]
+const FAKE_PLATFORM_CHANCE: float = 0.05
+const MOVING_PLATFORM_CHANCE: float = 0.12
+const COLLAPSING_PLATFORM_CHANCE: float = 0.12
+
+const MEMORY_HEIGHTS: Array = [100, 300, 700, 1500]
 const MEMORY_TEXTS: Dictionary = {
 	100: "Someone climbed before you.",
 	300: "They did not reach the top.",
 	700: "The wall remembers why.",
+	1500: "You are not the first to come this far.",
 }
-const MEMORY_COLOR: Color = Color(0.7, 0.6, 0.95, 1)
-const MEMORY_DURATION: float = 4.5
+
+const CHECKPOINT_SHAKE_STRENGTH: float = 4.0
+const CHECKPOINT_SHAKE_DURATION: float = 0.25
 
 @onready var player: CharacterBody2D = $Player
 @onready var hud = $HUD
 @onready var camera: Camera2D = $Player/Camera2D
 @onready var death_screen = $DeathScreen
+@onready var memory_overlay = $MemoryOverlay
 
 var spawn_position: Vector2
 var current_checkpoint_position: Vector2
@@ -48,6 +59,8 @@ func _ready() -> void:
 	randomize()
 	death_screen.respawn_requested.connect(_on_respawn_requested)
 	death_screen.menu_requested.connect(_on_menu_requested)
+	player.landed_hard.connect(_on_player_landed_hard)
+	player.dashed.connect(_on_player_dashed)
 
 	var top_y: float = _generate_platforms()
 	player.global_position = spawn_position
@@ -66,14 +79,12 @@ func _generate_platforms() -> float:
 	var y: float = 900.0
 
 	for i in range(PLATFORM_COUNT):
-		var platform: StaticBody2D = PLATFORM_SCENE.instantiate()
-		platform.position = Vector2(x, y)
-		add_child(platform)
+		var platform: Node = _spawn_platform_variant(i, x, y)
 
 		if i == 0:
 			spawn_position = Vector2(x, y - 60.0)
 			kill_y = y + FALL_DEATH_MARGIN
-		else:
+		elif platform is StaticBody2D or platform is AnimatableBody2D:
 			if randf() < COIN_CHANCE:
 				_spawn_coin(Vector2(x, y - 50.0))
 			if i > SPIKE_SAFE_PLATFORM_COUNT and randf() < SPIKE_CHANCE:
@@ -84,6 +95,24 @@ func _generate_platforms() -> float:
 			x = randf_range(EDGE_MARGIN, VIEWPORT_WIDTH - EDGE_MARGIN)
 
 	return y
+
+
+func _spawn_platform_variant(i: int, x: float, y: float) -> Node:
+	var scene: PackedScene = PLATFORM_SCENE
+
+	if i > SPIKE_SAFE_PLATFORM_COUNT:
+		var roll: float = randf()
+		if roll < FAKE_PLATFORM_CHANCE:
+			scene = FAKE_PLATFORM_SCENE
+		elif roll < FAKE_PLATFORM_CHANCE + MOVING_PLATFORM_CHANCE:
+			scene = MOVING_PLATFORM_SCENE
+		elif roll < FAKE_PLATFORM_CHANCE + MOVING_PLATFORM_CHANCE + COLLAPSING_PLATFORM_CHANCE:
+			scene = COLLAPSING_PLATFORM_SCENE
+
+	var platform: Node = scene.instantiate()
+	platform.position = Vector2(x, y)
+	add_child(platform)
+	return platform
 
 
 func _spawn_coin(pos: Vector2) -> void:
@@ -127,6 +156,16 @@ func _spawn_death_marker(height: float) -> void:
 	marker.set_height(int(height))
 
 
+func _spawn_particle_burst(pos: Vector2, color: Color, count: int, speed: float, lifetime: float) -> void:
+	var burst: Node2D = PARTICLE_BURST_SCENE.instantiate()
+	burst.particle_color = color
+	burst.particle_count = count
+	burst.particle_speed = speed
+	burst.lifetime = lifetime
+	burst.position = pos
+	add_child(burst)
+
+
 func _setup_camera(top_y: float) -> void:
 	camera.limit_left = 0
 	camera.limit_right = int(VIEWPORT_WIDTH)
@@ -153,8 +192,9 @@ func _check_memories(height: float) -> void:
 	for threshold in MEMORY_HEIGHTS:
 		if height >= float(threshold) and not SaveManager.has_seen_memory(threshold):
 			SaveManager.mark_memory_seen(threshold)
-			hud.show_toast(MEMORY_TEXTS[threshold], MEMORY_DURATION, MEMORY_COLOR)
+			memory_overlay.show_memory(MEMORY_TEXTS[threshold])
 			AudioManager.play("unlock")
+			return
 
 
 func _on_coin_collected() -> void:
@@ -169,6 +209,14 @@ func _on_spike_hit() -> void:
 	_die(height)
 
 
+func _on_player_landed_hard(pos: Vector2) -> void:
+	_spawn_particle_burst(pos, Color(0.75, 0.73, 0.7, 0.8), 8, 100.0, 0.35)
+
+
+func _on_player_dashed(pos: Vector2, _direction: float) -> void:
+	_spawn_particle_burst(pos, Color(0.6, 0.85, 0.95, 0.9), 10, 160.0, 0.3)
+
+
 func _on_checkpoint_activated(checkpoint: Node) -> void:
 	checkpoints_this_run += 1
 	current_checkpoint_position = Vector2(VIEWPORT_WIDTH / 2.0, checkpoint.global_position.y - 20.0)
@@ -176,6 +224,7 @@ func _on_checkpoint_activated(checkpoint: Node) -> void:
 	SaveManager.record_checkpoint(checkpoints_this_run)
 	AudioManager.play("checkpoint")
 	hud.show_toast("Checkpoint! %dm" % checkpoint.height_meters)
+	player.shake_camera(CHECKPOINT_SHAKE_STRENGTH, CHECKPOINT_SHAKE_DURATION)
 
 
 func _nearest_checkpoint_distance(height: float) -> float:
