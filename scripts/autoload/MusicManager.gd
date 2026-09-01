@@ -10,8 +10,8 @@ extends Node
 const FADE_RATE_DB: float = 24.0
 const SILENT_DB: float = -80.0
 
-const ZONE_BASE_DB: Array = [-7.0, -5.0, -8.0]
-const ZONE_PEAK_DB: Array = [-1.0, 1.0, -2.0]
+const ZONE_BASE_DB: Array = [-5.0, -3.0, -6.0]
+const ZONE_PEAK_DB: Array = [0.0, 2.0, -0.5]
 
 const ZONE_TRACK_PATHS: Array = [
 	"res://audio/music/ruins_theme.ogg",

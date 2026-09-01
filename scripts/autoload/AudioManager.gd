@@ -5,6 +5,21 @@ extends Node
 # play() silently does nothing. See audio/README.md for the expected manifest.
 
 const VOICE_COUNT: int = 4
+const PITCH_VARIANCE: float = 0.08
+
+# Extra gain and a slightly wider pitch wobble for the moments that should
+# feel the most fun/rewarding — makes them punch through and feel bouncy
+# rather than flat, once real assets are dropped in.
+const SFX_VOLUME_DB: Dictionary = {
+	"jump": 4.0,
+	"dash": 4.0,
+	"checkpoint": 6.0,
+	"memory": 5.0,
+	"white_bird": 4.0,
+	"chirp": 4.0,
+	"near_miss": 5.0,
+}
+const HYPE_PITCH_VARIANCE: float = 0.14
 
 const SFX_PATHS: Dictionary = {
 	"jump": "res://audio/sfx/jump.ogg",
@@ -47,4 +62,7 @@ func play(sfx_name: String) -> void:
 	var voice: AudioStreamPlayer = _voices[_next_voice]
 	_next_voice = (_next_voice + 1) % VOICE_COUNT
 	voice.stream = _cache[sfx_name]
+	voice.volume_db = SFX_VOLUME_DB.get(sfx_name, 0.0)
+	var variance: float = HYPE_PITCH_VARIANCE if SFX_VOLUME_DB.has(sfx_name) else PITCH_VARIANCE
+	voice.pitch_scale = 1.0 + randf_range(-variance, variance)
 	voice.play()

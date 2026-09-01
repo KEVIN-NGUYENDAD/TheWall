@@ -79,15 +79,15 @@ theme_override_constants/outline_size = 3
 text = "HOLD TO CHARGE"
 
 [node name="ChargeBarBG" type="ColorRect" parent="."]
-anchor_left = 0.0
+anchor_left = 1.0
 anchor_top = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = 40.0
+offset_left = -114.0
 offset_top = -270.0
-offset_right = -40.0
+offset_right = -24.0
 offset_bottom = -246.0
-color = Color(0.2, 0.2, 0.26, 0.9)
+color = Color(0.3, 0.75, 0.95, 0.55)
 
 [node name="ChargeBarFill" type="ColorRect" parent="ChargeBarBG"]
 anchor_left = 0.0
