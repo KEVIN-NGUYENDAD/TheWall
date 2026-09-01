@@ -20,11 +20,23 @@ const LAND_SPEED_THRESHOLD: float = 500.0
 
 const CHARGE_COLOR: Color = Color(0.95, 0.85, 0.2)
 
+const DASH_SPEED: float = 600.0
+const DASH_DURATION: float = 0.18
+const DASH_COOLDOWN: float = 0.6
+const DOUBLE_TAP_WINDOW: float = 0.3
+const DASH_STRETCH: Vector2 = Vector2(1.5, 0.6)
+
 var charge_time: float = 0.0
 var is_charging: bool = false
 var coyote_timer: float = 0.0
 var was_on_floor: bool = false
 var radius: float = 24.0
+
+var dash_timer: float = 0.0
+var dash_cooldown_timer: float = 0.0
+var dash_direction: float = 0.0
+var last_left_tap_time: float = -10.0
+var last_right_tap_time: float = -10.0
 
 @onready var collision_shape: CollisionShape2D = $CollisionShape2D
 @onready var visual: Node2D = $Visual
@@ -39,6 +51,7 @@ func _ready() -> void:
 
 func _physics_process(delta: float) -> void:
 	_apply_gravity(delta)
+	_handle_dash(delta)
 	_handle_movement(delta)
 	_handle_charge_and_jump(delta)
 
@@ -58,9 +71,38 @@ func _apply_gravity(delta: float) -> void:
 
 
 func _handle_movement(delta: float) -> void:
+	if dash_timer > 0.0:
+		velocity.x = dash_direction * DASH_SPEED
+		return
 	var move_input: float = Input.get_axis("move_left", "move_right")
 	var accel: float = GROUND_ACCEL if is_on_floor() else AIR_ACCEL
 	velocity.x = move_toward(velocity.x, move_input * MOVE_SPEED, accel * delta)
+
+
+func _handle_dash(delta: float) -> void:
+	dash_cooldown_timer = max(dash_cooldown_timer - delta, 0.0)
+	if dash_timer > 0.0:
+		dash_timer -= delta
+
+	var now: float = Time.get_ticks_msec() / 1000.0
+
+	if Input.is_action_just_pressed("move_left"):
+		if not is_on_floor() and dash_cooldown_timer <= 0.0 and now - last_left_tap_time <= DOUBLE_TAP_WINDOW:
+			_start_dash(-1.0)
+		last_left_tap_time = now
+
+	if Input.is_action_just_pressed("move_right"):
+		if not is_on_floor() and dash_cooldown_timer <= 0.0 and now - last_right_tap_time <= DOUBLE_TAP_WINDOW:
+			_start_dash(1.0)
+		last_right_tap_time = now
+
+
+func _start_dash(direction: float) -> void:
+	dash_timer = DASH_DURATION
+	dash_cooldown_timer = DASH_COOLDOWN
+	dash_direction = direction
+	visual.scale = DASH_STRETCH
+	AudioManager.play("dash")
 
 
 func _handle_charge_and_jump(delta: float) -> void:

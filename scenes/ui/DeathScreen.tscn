@@ -14,15 +14,24 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 color = Color(0, 0, 0, 0.6)
 
+[node name="NearMissFlash" type="ColorRect" parent="."]
+visible = false
+mouse_filter = 2
+anchor_left = 0.0
+anchor_top = 0.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.95, 0.8, 0.2, 0.55)
+
 [node name="Panel" type="Panel" parent="."]
 anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -160.0
-offset_top = -170.0
-offset_right = 160.0
-offset_bottom = 170.0
+offset_left = -180.0
+offset_top = -245.0
+offset_right = 180.0
+offset_bottom = 245.0
 
 [node name="VBoxContainer" type="VBoxContainer" parent="Panel"]
 anchor_left = 0.0
@@ -34,17 +43,17 @@ offset_top = 20.0
 offset_right = -20.0
 offset_bottom = -20.0
 alignment = 1
-theme_override_constants/separation = 10
+theme_override_constants/separation = 14
 
 [node name="TitleLabel" type="Label" parent="Panel/VBoxContainer"]
 horizontal_alignment = 1
-theme_override_font_sizes/font_size = 28
+theme_override_font_sizes/font_size = 32
 theme_override_colors/font_color = Color(0.95, 0.3, 0.25, 1)
 text = "You Fell!"
 
 [node name="HeightLabel" type="Label" parent="Panel/VBoxContainer"]
 horizontal_alignment = 1
-theme_override_font_sizes/font_size = 20
+theme_override_font_sizes/font_size = 22
 text = "You reached 0 m"
 
 [node name="BestLabel" type="Label" parent="Panel/VBoxContainer"]
@@ -55,15 +64,30 @@ text = "Best: 0 m"
 horizontal_alignment = 1
 text = "Coins: 0"
 
+[node name="LostLabel" type="Label" parent="Panel/VBoxContainer"]
+horizontal_alignment = 1
+theme_override_colors/font_color = Color(0.9, 0.4, 0.35, 1)
+text = "Lost: 0 m"
+
+[node name="NearMissLabel" type="Label" parent="Panel/VBoxContainer"]
+visible = false
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 22
+theme_override_colors/font_color = Color(0.95, 0.8, 0.2, 1)
+text = "So close! You were within 5m of a checkpoint."
+autowrap_mode = 2
+
 [node name="Spacer" type="Control" parent="Panel/VBoxContainer"]
 custom_minimum_size = Vector2(0, 10)
 
 [node name="RespawnButton" type="Button" parent="Panel/VBoxContainer"]
-custom_minimum_size = Vector2(0, 48)
+custom_minimum_size = Vector2(0, 60)
+theme_override_font_sizes/font_size = 22
 text = "Respawn at Checkpoint"
 
 [node name="MenuButton" type="Button" parent="Panel/VBoxContainer"]
-custom_minimum_size = Vector2(0, 44)
+custom_minimum_size = Vector2(0, 56)
+theme_override_font_sizes/font_size = 20
 text = "Main Menu"
 
 [connection signal="pressed" from="Panel/VBoxContainer/RespawnButton" to="." method="_on_respawn_pressed"]

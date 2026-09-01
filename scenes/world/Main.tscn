@@ -1,10 +1,11 @@
-[gd_scene load_steps=6 format=3]
+[gd_scene load_steps=7 format=3]
 
 [ext_resource type="Script" path="res://scripts/world/Main.gd" id="1"]
 [ext_resource type="PackedScene" path="res://scenes/player/Player.tscn" id="2"]
 [ext_resource type="PackedScene" path="res://scenes/ui/HUD.tscn" id="3"]
 [ext_resource type="PackedScene" path="res://scenes/ui/DeathScreen.tscn" id="4"]
 [ext_resource type="PackedScene" path="res://scenes/ui/TouchControls.tscn" id="5"]
+[ext_resource type="PackedScene" path="res://scenes/world/ShapeAbove.tscn" id="6"]
 
 [node name="Main" type="Node2D"]
 script = ExtResource("1")
@@ -16,15 +17,18 @@ motion_scale = Vector2(0.2, 0.2)
 motion_mirroring = Vector2(0, 960)
 
 [node name="Mountain1" type="Polygon2D" parent="ParallaxBackground/Far"]
-color = Color(0.14, 0.16, 0.24, 1)
+color = Color(0.22, 0.25, 0.35, 1)
+antialiased = true
 polygon = PackedVector2Array(0, 960, 0, 760, 120, 620, 260, 760, 260, 960)
 
 [node name="Mountain2" type="Polygon2D" parent="ParallaxBackground/Far"]
-color = Color(0.14, 0.16, 0.24, 1)
+color = Color(0.22, 0.25, 0.35, 1)
+antialiased = true
 polygon = PackedVector2Array(220, 960, 220, 700, 380, 520, 540, 700, 540, 960)
 
 [node name="Mountain3" type="Polygon2D" parent="ParallaxBackground/Far"]
-color = Color(0.14, 0.16, 0.24, 1)
+color = Color(0.22, 0.25, 0.35, 1)
+antialiased = true
 polygon = PackedVector2Array(420, 960, 420, 780, 540, 660, 540, 960)
 
 [node name="Mid" type="ParallaxLayer" parent="ParallaxBackground"]
@@ -32,11 +36,13 @@ motion_scale = Vector2(0.5, 0.5)
 motion_mirroring = Vector2(0, 960)
 
 [node name="Hill1" type="Polygon2D" parent="ParallaxBackground/Mid"]
-color = Color(0.18, 0.22, 0.32, 1)
+color = Color(0.28, 0.32, 0.44, 1)
+antialiased = true
 polygon = PackedVector2Array(0, 960, 0, 840, 160, 760, 320, 840, 320, 960)
 
 [node name="Hill2" type="Polygon2D" parent="ParallaxBackground/Mid"]
-color = Color(0.18, 0.22, 0.32, 1)
+color = Color(0.28, 0.32, 0.44, 1)
+antialiased = true
 polygon = PackedVector2Array(260, 960, 260, 860, 440, 780, 540, 840, 540, 960)
 
 [node name="Near" type="ParallaxLayer" parent="ParallaxBackground"]
@@ -44,12 +50,16 @@ motion_scale = Vector2(0.8, 0.8)
 motion_mirroring = Vector2(0, 960)
 
 [node name="Cloud1" type="Polygon2D" parent="ParallaxBackground/Near"]
-color = Color(0.85, 0.87, 0.92, 0.35)
+color = Color(0.9, 0.92, 0.96, 0.45)
+antialiased = true
 polygon = PackedVector2Array(40, 200, 90, 180, 140, 195, 160, 215, 120, 230, 60, 225)
 
 [node name="Cloud2" type="Polygon2D" parent="ParallaxBackground/Near"]
-color = Color(0.85, 0.87, 0.92, 0.35)
+color = Color(0.9, 0.92, 0.96, 0.45)
+antialiased = true
 polygon = PackedVector2Array(320, 560, 370, 540, 420, 555, 440, 575, 400, 590, 340, 585)
+
+[node name="ShapeAbove" parent="." instance=ExtResource("6")]
 
 [node name="Player" parent="." instance=ExtResource("2")]
 

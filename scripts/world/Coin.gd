@@ -25,5 +25,5 @@ func _on_body_entered(body: Node) -> void:
 
 
 func _draw() -> void:
-	draw_circle(Vector2.ZERO, RADIUS, Color(0.95, 0.8, 0.2))
-	draw_circle(Vector2.ZERO, RADIUS * 0.55, Color(0.8, 0.6, 0.1))
+	draw_circle(Vector2.ZERO, RADIUS, Color(0.95, 0.8, 0.2), true, -1.0, true)
+	draw_circle(Vector2.ZERO, RADIUS * 0.55, Color(0.8, 0.6, 0.1), true, -1.0, true)

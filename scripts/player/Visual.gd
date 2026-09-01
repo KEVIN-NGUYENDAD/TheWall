@@ -7,6 +7,6 @@ var is_charging: bool = false
 
 
 func _draw() -> void:
-	draw_circle(Vector2.ZERO, radius, body_color)
+	draw_circle(Vector2.ZERO, radius, body_color, true, -1.0, true)
 	if is_charging:
-		draw_arc(Vector2.ZERO, radius + 6.0, 0.0, TAU * charge_ratio, 32, Color(1.0, 0.3, 0.3), 4.0)
+		draw_arc(Vector2.ZERO, radius + 6.0, 0.0, TAU * charge_ratio, 32, Color(1.0, 0.3, 0.3), 4.0, true)

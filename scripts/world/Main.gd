@@ -5,6 +5,8 @@ const PLATFORM_COUNT: int = 360
 const PLATFORM_SCENE: PackedScene = preload("res://scenes/world/Platform.tscn")
 const CHECKPOINT_SCENE: PackedScene = preload("res://scenes/world/Checkpoint.tscn")
 const COIN_SCENE: PackedScene = preload("res://scenes/world/Coin.tscn")
+const SPIKE_SCENE: PackedScene = preload("res://scenes/world/Spike.tscn")
+const DEATH_MARKER_SCENE: PackedScene = preload("res://scenes/world/DeathMarker.tscn")
 
 const VIEWPORT_WIDTH: float = 540.0
 const EDGE_MARGIN: float = 90.0
@@ -14,6 +16,18 @@ const FALL_DEATH_MARGIN: float = 200.0
 const CAMERA_TOP_MARGIN: float = 500.0
 const CHECKPOINT_INTERVAL_M: int = 100
 const COIN_CHANCE: float = 0.45
+const SPIKE_CHANCE: float = 0.1
+const SPIKE_SAFE_PLATFORM_COUNT: int = 5
+const NEAR_MISS_METERS: float = 5.0
+
+const MEMORY_HEIGHTS: Array = [100, 300, 700]
+const MEMORY_TEXTS: Dictionary = {
+	100: "Someone climbed before you.",
+	300: "They did not reach the top.",
+	700: "The wall remembers why.",
+}
+const MEMORY_COLOR: Color = Color(0.7, 0.6, 0.95, 1)
+const MEMORY_DURATION: float = 4.5
 
 @onready var player: CharacterBody2D = $Player
 @onready var hud = $HUD
@@ -22,10 +36,12 @@ const COIN_CHANCE: float = 0.45
 
 var spawn_position: Vector2
 var current_checkpoint_position: Vector2
+var current_checkpoint_height: float = 0.0
 var start_y: float
 var kill_y: float
 var is_dead: bool = false
 var checkpoints_this_run: int = 0
+var checkpoints: Array = []
 
 
 func _ready() -> void:
@@ -36,9 +52,11 @@ func _ready() -> void:
 	var top_y: float = _generate_platforms()
 	player.global_position = spawn_position
 	current_checkpoint_position = spawn_position
+	current_checkpoint_height = 0.0
 	start_y = spawn_position.y
 	_setup_camera(top_y)
 	_generate_checkpoints(top_y)
+	_spawn_recorded_death_markers()
 
 	SaveManager.start_run()
 
@@ -55,8 +73,11 @@ func _generate_platforms() -> float:
 		if i == 0:
 			spawn_position = Vector2(x, y - 60.0)
 			kill_y = y + FALL_DEATH_MARGIN
-		elif randf() < COIN_CHANCE:
-			_spawn_coin(Vector2(x, y - 50.0))
+		else:
+			if randf() < COIN_CHANCE:
+				_spawn_coin(Vector2(x, y - 50.0))
+			if i > SPIKE_SAFE_PLATFORM_COUNT and randf() < SPIKE_CHANCE:
+				_spawn_spike(Vector2(x, y))
 
 		if i < PLATFORM_COUNT - 1:
 			y -= randf_range(MIN_GAP, MAX_GAP)
@@ -72,6 +93,14 @@ func _spawn_coin(pos: Vector2) -> void:
 	coin.collected.connect(_on_coin_collected)
 
 
+func _spawn_spike(platform_pos: Vector2) -> void:
+	var spike: Area2D = SPIKE_SCENE.instantiate()
+	var edge_offset: float = 55.0 if randf() < 0.5 else -55.0
+	spike.position = platform_pos + Vector2(edge_offset, -12.0)
+	add_child(spike)
+	spike.player_hit.connect(_on_spike_hit)
+
+
 func _generate_checkpoints(top_y: float) -> void:
 	var total_meters: int = int((spawn_position.y - top_y) / PIXELS_PER_METER)
 	var m: int = CHECKPOINT_INTERVAL_M
@@ -82,7 +111,20 @@ func _generate_checkpoints(top_y: float) -> void:
 		checkpoint.height_meters = m
 		add_child(checkpoint)
 		checkpoint.activated.connect(_on_checkpoint_activated)
+		checkpoints.append(checkpoint)
 		m += CHECKPOINT_INTERVAL_M
+
+
+func _spawn_recorded_death_markers() -> void:
+	for height in SaveManager.data.death_heights:
+		_spawn_death_marker(float(height))
+
+
+func _spawn_death_marker(height: float) -> void:
+	var marker: Node2D = DEATH_MARKER_SCENE.instantiate()
+	marker.position = Vector2(randf_range(EDGE_MARGIN, VIEWPORT_WIDTH - EDGE_MARGIN), spawn_position.y - height * PIXELS_PER_METER)
+	add_child(marker)
+	marker.set_height(int(height))
 
 
 func _setup_camera(top_y: float) -> void:
@@ -101,9 +143,18 @@ func _process(_delta: float) -> void:
 	hud.set_charge(player.get_charge_ratio())
 	hud.set_coins(SaveManager.data.total_coins)
 	SaveManager.update_best_height(height)
+	_check_memories(height)
 
 	if player.global_position.y > kill_y:
 		_die(height)
+
+
+func _check_memories(height: float) -> void:
+	for threshold in MEMORY_HEIGHTS:
+		if height >= float(threshold) and not SaveManager.has_seen_memory(threshold):
+			SaveManager.mark_memory_seen(threshold)
+			hud.show_toast(MEMORY_TEXTS[threshold], MEMORY_DURATION, MEMORY_COLOR)
+			AudioManager.play("unlock")
 
 
 func _on_coin_collected() -> void:
@@ -111,20 +162,47 @@ func _on_coin_collected() -> void:
 	AudioManager.play("coin")
 
 
+func _on_spike_hit() -> void:
+	if is_dead:
+		return
+	var height: float = max(0.0, start_y - player.global_position.y) / PIXELS_PER_METER
+	_die(height)
+
+
 func _on_checkpoint_activated(checkpoint: Node) -> void:
 	checkpoints_this_run += 1
 	current_checkpoint_position = Vector2(VIEWPORT_WIDTH / 2.0, checkpoint.global_position.y - 20.0)
+	current_checkpoint_height = float(checkpoint.height_meters)
 	SaveManager.record_checkpoint(checkpoints_this_run)
 	AudioManager.play("checkpoint")
 	hud.show_toast("Checkpoint! %dm" % checkpoint.height_meters)
 
 
+func _nearest_checkpoint_distance(height: float) -> float:
+	var nearest: float = INF
+	for checkpoint in checkpoints:
+		var dist: float = abs(height - float(checkpoint.height_meters))
+		if dist < nearest:
+			nearest = dist
+	return nearest
+
+
 func _die(height_reached: float) -> void:
 	is_dead = true
-	SaveManager.record_death()
-	AudioManager.play("death")
+
+	var lost_meters: float = max(0.0, height_reached - current_checkpoint_height)
+	var is_near_miss: bool = _nearest_checkpoint_distance(height_reached) <= NEAR_MISS_METERS
+
+	SaveManager.record_death(int(height_reached))
+	_spawn_death_marker(height_reached)
+
+	if is_near_miss:
+		AudioManager.play("near_miss")
+	else:
+		AudioManager.play("death")
+
 	get_tree().paused = true
-	death_screen.show_death(int(height_reached), SaveManager.data.best_height, SaveManager.data.total_coins)
+	death_screen.show_death(int(height_reached), SaveManager.data.best_height, SaveManager.data.total_coins, int(lost_meters), is_near_miss)
 
 
 func _on_respawn_requested() -> void:

@@ -17,6 +17,8 @@ func _ready() -> void:
 	_cache["death"] = _make_tone(160.0, 0.35, 0.35)
 	_cache["click"] = _make_tone(740.0, 0.05, 0.25)
 	_cache["unlock"] = _make_chime([523.0, 659.0, 784.0], 0.1, 0.3)
+	_cache["dash"] = _make_tone(900.0, 0.08, 0.3)
+	_cache["near_miss"] = _make_chime([784.0, 587.0], 0.09, 0.32)
 
 
 func play(sfx_name: String) -> void:

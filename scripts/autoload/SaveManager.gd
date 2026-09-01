@@ -45,6 +45,8 @@ func _default_data() -> Dictionary:
 		"unlocked_skins": ["default"],
 		"selected_skin": "default",
 		"achievements": {},
+		"death_heights": [],
+		"memories_seen": [],
 		"stats": {
 			"total_jumps": 0,
 			"total_deaths": 0,
@@ -100,10 +102,12 @@ func record_jump() -> void:
 		unlock_achievement("first_jump")
 
 
-func record_death() -> void:
+func record_death(height: int = -1) -> void:
 	data.stats.total_deaths += 1
 	if data.stats.total_deaths >= 10:
 		unlock_achievement("deaths_10")
+	if height >= 0:
+		data.death_heights.append(height)
 	save_game()
 
 
@@ -171,6 +175,17 @@ func get_selected_skin_color() -> Color:
 	if SKINS.has(id):
 		return SKINS[id].color
 	return SKINS["default"].color
+
+
+func has_seen_memory(height: int) -> bool:
+	return data.memories_seen.has(height)
+
+
+func mark_memory_seen(height: int) -> void:
+	if has_seen_memory(height):
+		return
+	data.memories_seen.append(height)
+	save_game()
 
 
 func unlock_achievement(id: String) -> void:

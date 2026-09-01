@@ -38,10 +38,11 @@ func set_charge(ratio: float) -> void:
 		charge_bar_fill.color = CHARGE_HIGH_COLOR
 
 
-func show_toast(text: String) -> void:
+func show_toast(text: String, duration: float = 2.0, accent_color: Color = Color(1, 1, 1, 1)) -> void:
 	toast_label.text = text
+	toast_label.add_theme_color_override("font_color", accent_color)
 	toast.visible = true
-	toast_timer.start()
+	toast_timer.start(duration)
 
 
 func _on_toast_timeout() -> void:
