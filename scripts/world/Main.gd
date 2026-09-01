@@ -235,6 +235,7 @@ func _check_zone_transition(height: float) -> void:
 	if zone != current_zone:
 		current_zone = zone
 		MusicManager.set_zone(zone)
+		AudioManager.play("area_discovery")
 
 		var target_sky: Color = ZONE_SKY_COLORS[zone]
 		var tween: Tween = create_tween()
@@ -434,7 +435,7 @@ func _spawn_predator_bird() -> void:
 	bird.position = _bird_spawn_position(from_left)
 	add_child(bird)
 	bird.hit_player.connect(_on_predator_hit)
-	bird.aim_at(player.global_position)
+	bird.begin_telegraph(player)
 
 
 func _on_predator_hit(knockback: Vector2) -> void:
