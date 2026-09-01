@@ -7,6 +7,7 @@ const CHARGE_HIGH_COLOR: Color = Color(0.95, 0.3, 0.25)
 @onready var height_label: Label = $HeightLabel
 @onready var best_label: Label = $BestLabel
 @onready var coin_label: Label = $CoinLabel
+@onready var charge_label: Label = $ChargeLabel
 @onready var charge_bar_fill: ColorRect = $ChargeBarBG/ChargeBarFill
 @onready var toast: Panel = $Toast
 @onready var toast_label: Label = $Toast/ToastLabel
@@ -16,6 +17,11 @@ const CHARGE_HIGH_COLOR: Color = Color(0.95, 0.3, 0.25)
 
 func _ready() -> void:
 	SaveManager.achievement_unlocked.connect(_on_achievement_unlocked)
+	charge_label.visible = SaveManager.data.stats.total_jumps == 0
+
+
+func hide_tutorial_hint() -> void:
+	charge_label.visible = false
 
 
 func set_height(current: int, best: int) -> void:

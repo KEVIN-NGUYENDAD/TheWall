@@ -26,6 +26,7 @@ const NEAR_MISS_METERS: float = 5.0
 
 const FAKE_PLATFORM_CHANCE: float = 0.05
 const MOVING_PLATFORM_CHANCE: float = 0.12
+const SKY_MOVING_PLATFORM_CHANCE: float = 0.25
 const COLLAPSING_PLATFORM_CHANCE: float = 0.12
 
 const MEMORY_HEIGHTS: Array = [100, 300, 700, 1500]
@@ -39,11 +40,53 @@ const MEMORY_TEXTS: Dictionary = {
 const CHECKPOINT_SHAKE_STRENGTH: float = 4.0
 const CHECKPOINT_SHAKE_DURATION: float = 0.25
 
+const MIN_MARKER_HEIGHT_M: float = 20.0
+const MARKER_MERGE_DISTANCE_M: float = 8.0
+
+# Area Progression: THE RUINS (0-100m) / THE SKY (100-500m) / THE VOID (500m+)
+const ZONE_SKY_START_M: float = 100.0
+const ZONE_VOID_START_M: float = 500.0
+const ZONE_TRANSITION_TIME: float = 2.5
+
+const RUINS_PLATFORM_COLOR: Color = Color(0.55, 0.56, 0.62, 1)
+const SKY_PLATFORM_COLOR: Color = Color(0.65, 0.75, 0.9, 1)
+const VOID_PLATFORM_COLOR: Color = Color(0.3, 0.28, 0.36, 1)
+
+const ZONE_SKY_COLORS: Dictionary = {
+	0: Color(0.13, 0.15, 0.22, 1),
+	1: Color(0.55, 0.72, 0.88, 1),
+	2: Color(0.03, 0.03, 0.06, 1),
+}
+const ZONE_MOUNTAIN_COLORS: Dictionary = {
+	0: Color(0.22, 0.25, 0.35, 1),
+	1: Color(0.6, 0.72, 0.85, 1),
+	2: Color(0.07, 0.06, 0.11, 1),
+}
+const ZONE_HILL_COLORS: Dictionary = {
+	0: Color(0.28, 0.32, 0.44, 1),
+	1: Color(0.7, 0.8, 0.9, 1),
+	2: Color(0.1, 0.09, 0.15, 1),
+}
+const ZONE_CLOUD_COLORS: Dictionary = {
+	0: Color(0.9, 0.92, 0.96, 0.45),
+	1: Color(1.0, 1.0, 1.0, 0.75),
+	2: Color(0.3, 0.28, 0.4, 0.25),
+}
+
 @onready var player: CharacterBody2D = $Player
 @onready var hud = $HUD
 @onready var camera: Camera2D = $Player/Camera2D
 @onready var death_screen = $DeathScreen
 @onready var memory_overlay = $MemoryOverlay
+
+@onready var mountains: Array = [
+	$ParallaxBackground/Far/Mountain1, $ParallaxBackground/Far/Mountain2,
+	$ParallaxBackground/Far/Mountain3, $ParallaxBackground/Far/Mountain4,
+]
+@onready var hills: Array = [$ParallaxBackground/Mid/Hill1, $ParallaxBackground/Mid/Hill2]
+@onready var clouds: Array = [
+	$ParallaxBackground/Near/Cloud1, $ParallaxBackground/Near/Cloud2, $ParallaxBackground/Near/Cloud3,
+]
 
 var spawn_position: Vector2
 var current_checkpoint_position: Vector2
@@ -53,6 +96,10 @@ var kill_y: float
 var is_dead: bool = false
 var checkpoints_this_run: int = 0
 var checkpoints: Array = []
+var tutorial_hidden: bool = false
+var current_zone: int = 0
+var current_sky_color: Color = Color(0.13, 0.15, 0.22, 1)
+var active_markers: Array = []
 
 
 func _ready() -> void:
@@ -77,14 +124,14 @@ func _ready() -> void:
 func _generate_platforms() -> float:
 	var x: float = VIEWPORT_WIDTH / 2.0
 	var y: float = 900.0
+	spawn_position = Vector2(x, y - 60.0)
+	kill_y = y + FALL_DEATH_MARGIN
 
 	for i in range(PLATFORM_COUNT):
-		var platform: Node = _spawn_platform_variant(i, x, y)
+		var height: float = max(0.0, (spawn_position.y - y) / PIXELS_PER_METER)
+		var platform: Node = _spawn_platform_variant(i, x, y, height)
 
-		if i == 0:
-			spawn_position = Vector2(x, y - 60.0)
-			kill_y = y + FALL_DEATH_MARGIN
-		elif platform is StaticBody2D or platform is AnimatableBody2D:
+		if i > 0 and (platform is StaticBody2D or platform is AnimatableBody2D):
 			if randf() < COIN_CHANCE:
 				_spawn_coin(Vector2(x, y - 50.0))
 			if i > SPIKE_SAFE_PLATFORM_COUNT and randf() < SPIKE_CHANCE:
@@ -97,22 +144,77 @@ func _generate_platforms() -> float:
 	return y
 
 
-func _spawn_platform_variant(i: int, x: float, y: float) -> Node:
+func _spawn_platform_variant(i: int, x: float, y: float, height: float) -> Node:
 	var scene: PackedScene = PLATFORM_SCENE
+	var is_normal: bool = true
 
 	if i > SPIKE_SAFE_PLATFORM_COUNT:
+		var moving_chance: float = MOVING_PLATFORM_CHANCE
+		if height >= ZONE_SKY_START_M and height < ZONE_VOID_START_M:
+			moving_chance = SKY_MOVING_PLATFORM_CHANCE
+
 		var roll: float = randf()
 		if roll < FAKE_PLATFORM_CHANCE:
 			scene = FAKE_PLATFORM_SCENE
-		elif roll < FAKE_PLATFORM_CHANCE + MOVING_PLATFORM_CHANCE:
+			is_normal = false
+		elif roll < FAKE_PLATFORM_CHANCE + moving_chance:
 			scene = MOVING_PLATFORM_SCENE
-		elif roll < FAKE_PLATFORM_CHANCE + MOVING_PLATFORM_CHANCE + COLLAPSING_PLATFORM_CHANCE:
+			is_normal = false
+		elif roll < FAKE_PLATFORM_CHANCE + moving_chance + COLLAPSING_PLATFORM_CHANCE:
 			scene = COLLAPSING_PLATFORM_SCENE
+			is_normal = false
 
 	var platform: Node = scene.instantiate()
 	platform.position = Vector2(x, y)
 	add_child(platform)
+
+	if is_normal:
+		_apply_zone_platform_color(platform, height)
+
 	return platform
+
+
+func _apply_zone_platform_color(platform: Node, height: float) -> void:
+	var color: Color = RUINS_PLATFORM_COLOR
+	if height >= ZONE_VOID_START_M:
+		color = VOID_PLATFORM_COLOR
+	elif height >= ZONE_SKY_START_M:
+		color = SKY_PLATFORM_COLOR
+	var poly: Polygon2D = platform.get_node_or_null("Polygon2D")
+	if poly:
+		poly.color = color
+
+
+func _get_zone_for_height(height: float) -> int:
+	if height >= ZONE_VOID_START_M:
+		return 2
+	elif height >= ZONE_SKY_START_M:
+		return 1
+	return 0
+
+
+func _check_zone_transition(height: float) -> void:
+	var zone: int = _get_zone_for_height(height)
+	if zone == current_zone:
+		return
+	current_zone = zone
+
+	var target_sky: Color = ZONE_SKY_COLORS[zone]
+	var tween: Tween = create_tween()
+	tween.set_parallel(true)
+	tween.tween_method(_set_sky_color, current_sky_color, target_sky, ZONE_TRANSITION_TIME)
+	current_sky_color = target_sky
+
+	for m in mountains:
+		tween.tween_property(m, "color", ZONE_MOUNTAIN_COLORS[zone], ZONE_TRANSITION_TIME)
+	for h in hills:
+		tween.tween_property(h, "color", ZONE_HILL_COLORS[zone], ZONE_TRANSITION_TIME)
+	for c in clouds:
+		tween.tween_property(c, "color", ZONE_CLOUD_COLORS[zone], ZONE_TRANSITION_TIME)
+
+
+func _set_sky_color(color: Color) -> void:
+	RenderingServer.set_default_clear_color(color)
 
 
 func _spawn_coin(pos: Vector2) -> void:
@@ -146,14 +248,24 @@ func _generate_checkpoints(top_y: float) -> void:
 
 func _spawn_recorded_death_markers() -> void:
 	for height in SaveManager.data.death_heights:
-		_spawn_death_marker(float(height))
+		_add_death_marker(float(height))
 
 
-func _spawn_death_marker(height: float) -> void:
+func _add_death_marker(height: float) -> void:
+	if height < MIN_MARKER_HEIGHT_M:
+		return
+
+	for entry in active_markers:
+		if abs(entry.height - height) <= MARKER_MERGE_DISTANCE_M:
+			entry.count += 1
+			entry.node.set_info(int(entry.height), entry.count)
+			return
+
 	var marker: Node2D = DEATH_MARKER_SCENE.instantiate()
 	marker.position = Vector2(randf_range(EDGE_MARGIN, VIEWPORT_WIDTH - EDGE_MARGIN), spawn_position.y - height * PIXELS_PER_METER)
 	add_child(marker)
-	marker.set_height(int(height))
+	marker.set_info(int(height), 1)
+	active_markers.append({"height": height, "count": 1, "node": marker})
 
 
 func _spawn_particle_burst(pos: Vector2, color: Color, count: int, speed: float, lifetime: float) -> void:
@@ -183,6 +295,11 @@ func _process(_delta: float) -> void:
 	hud.set_coins(SaveManager.data.total_coins)
 	SaveManager.update_best_height(height)
 	_check_memories(height)
+	_check_zone_transition(height)
+
+	if not tutorial_hidden and SaveManager.data.stats.total_jumps > 0:
+		hud.hide_tutorial_hint()
+		tutorial_hidden = true
 
 	if player.global_position.y > kill_y:
 		_die(height)
@@ -209,12 +326,12 @@ func _on_spike_hit() -> void:
 	_die(height)
 
 
-func _on_player_landed_hard(pos: Vector2) -> void:
-	_spawn_particle_burst(pos, Color(0.75, 0.73, 0.7, 0.8), 8, 100.0, 0.35)
+func _on_player_landed_hard(land_position: Vector2) -> void:
+	_spawn_particle_burst(land_position, Color(0.75, 0.73, 0.7, 0.8), 8, 100.0, 0.35)
 
 
-func _on_player_dashed(pos: Vector2, _direction: float) -> void:
-	_spawn_particle_burst(pos, Color(0.6, 0.85, 0.95, 0.9), 10, 160.0, 0.3)
+func _on_player_dashed(dash_position: Vector2, _direction: float) -> void:
+	_spawn_particle_burst(dash_position, Color(0.6, 0.85, 0.95, 0.9), 10, 160.0, 0.3)
 
 
 func _on_checkpoint_activated(checkpoint: Node) -> void:
@@ -243,7 +360,7 @@ func _die(height_reached: float) -> void:
 	var is_near_miss: bool = _nearest_checkpoint_distance(height_reached) <= NEAR_MISS_METERS
 
 	SaveManager.record_death(int(height_reached))
-	_spawn_death_marker(height_reached)
+	_add_death_marker(height_reached)
 
 	if is_near_miss:
 		AudioManager.play("near_miss")
