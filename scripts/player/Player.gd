@@ -159,6 +159,11 @@ func _release_jump() -> void:
 	SaveManager.record_jump()
 
 
+func apply_knockback(knockback: Vector2) -> void:
+	velocity = knockback
+	AudioManager.play("hit")
+
+
 func reset_charge() -> void:
 	is_charging = false
 	charge_time = 0.0

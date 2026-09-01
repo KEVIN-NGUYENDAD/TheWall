@@ -19,6 +19,11 @@ func _ready() -> void:
 	_cache["unlock"] = _make_chime([523.0, 659.0, 784.0], 0.1, 0.3)
 	_cache["dash"] = _make_tone(900.0, 0.08, 0.3)
 	_cache["near_miss"] = _make_chime([784.0, 587.0], 0.09, 0.32)
+	_cache["landing"] = _make_tone(140.0, 0.09, 0.3)
+	_cache["memory"] = _make_chime([392.0, 466.16, 587.0], 0.35, 0.28)
+	_cache["white_bird"] = _make_chime([880.0, 1046.5, 1318.5], 0.06, 0.28)
+	_cache["chirp"] = _make_chime([1568.0, 1760.0], 0.05, 0.2)
+	_cache["hit"] = _make_tone(90.0, 0.2, 0.4)
 
 
 func play(sfx_name: String) -> void:
