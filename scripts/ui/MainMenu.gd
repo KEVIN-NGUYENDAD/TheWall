@@ -6,6 +6,7 @@ extends Control
 func _ready() -> void:
 	if OS.has_feature("mobile"):
 		quit_button.hide()
+	MusicManager.play_menu()
 
 
 func _on_play_pressed() -> void:

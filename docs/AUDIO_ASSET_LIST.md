@@ -1,25 +1,25 @@
 # Audio Asset List
 
-Priority list of real audio files to source/produce for TheWall. These are
-the exact files the engine is wired to load right now — drop a file at the
-given path and it plays automatically, with **no code changes required**.
-Until a file exists at a given path, that sound/track is silently skipped
-(no crash, no placeholder tone, just silence for that one hook).
+Priority list of real audio files used by TheWall. These are the exact files
+the engine is wired to load right now. Until a file exists at a given path,
+that sound/track is silently skipped (no crash, no placeholder tone, just
+silence for that one hook).
 
-Do not generate placeholder or procedural audio for these — leave the paths
-empty until real assets are ready.
+Do not generate placeholder or procedural audio — SFX below are still
+awaiting real files; leave those paths empty until real assets are ready.
 
-## MUSIC — `res://audio/music/`
+## MUSIC — `res://audio/music/` (in place, real tracks)
 
-| File | Zone | Notes |
-|---|---|---|
-| `ruins_theme.ogg` | The Ruins (0–100m) | Loops. Bright, cheerful, adventurous. |
-| `sky_theme.ogg` | The Sky (100–500m) | Loops. Uplifting, energetic, sun-drenched. |
-| `void_theme.ogg` | The Void (500m+) | Loops. Mysterious, epic — not horror. |
+| File | Used for |
+|---|---|
+| `velariomusic-happy-vibes-591803.mp3` | Menu |
+| `the_mountain-happy-happy-music-496549.mp3` | The Ruins (0–100m) |
+| `jorisvermeer-happy-adventure-quest-572050.mp3` | The Sky (100–500m) |
+| `the_mountain-fantasy-quest-184140.mp3` | The Void (500m+) |
 
-All three play simultaneously at runtime and are crossfaded by volume based
-on zone and progress, so each track should loop seamlessly and sit at a
-similar perceived loudness to the others.
+Filenames are unmodified as sourced — do not rename. The three zone tracks
+play simultaneously at runtime and are crossfaded by volume based on zone and
+progress. The menu track plays independently on its own player.
 
 ## SFX — `res://audio/sfx/`
 

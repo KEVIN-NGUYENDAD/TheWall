@@ -2,10 +2,9 @@ extends Node
 
 # Adaptive zone music: 3 looping tracks (one per zone) always playing in
 # parallel, crossfaded by volume based on the current zone and how far the
-# player has progressed through it. Loads real audio files from
-# res://audio/music/ — no procedural synthesis. If a zone's track file
-# doesn't exist yet, that zone simply stays silent until one is added.
-# See audio/README.md for the expected manifest.
+# player has progressed through it, plus a separate single-track menu player.
+# Loads real audio files from res://audio/music/ — no procedural synthesis.
+# See audio/README.md for the current track mapping.
 
 const FADE_RATE_DB: float = 24.0
 const SILENT_DB: float = -80.0
@@ -14,15 +13,18 @@ const ZONE_BASE_DB: Array = [-5.0, -3.0, -6.0]
 const ZONE_PEAK_DB: Array = [0.0, 2.0, -0.5]
 
 const ZONE_TRACK_PATHS: Array = [
-	"res://audio/music/ruins_theme.ogg",
-	"res://audio/music/sky_theme.ogg",
-	"res://audio/music/void_theme.ogg",
+	"res://audio/music/the_mountain-happy-happy-music-496549.mp3",
+	"res://audio/music/jorisvermeer-happy-adventure-quest-572050.mp3",
+	"res://audio/music/the_mountain-fantasy-quest-184140.mp3",
 ]
+const MENU_TRACK_PATH: String = "res://audio/music/velariomusic-happy-vibes-591803.mp3"
+const MENU_VOLUME_DB: float = -3.0
 
 var players: Array = []
 var current_zone: int = 0
 var intensity: float = 0.0
 var active: bool = false
+var _menu_player: AudioStreamPlayer
 
 
 func _ready() -> void:
@@ -39,6 +41,14 @@ func _ready() -> void:
 			_configure_loop(stream)
 			p.stream = stream
 
+	_menu_player = AudioStreamPlayer.new()
+	_menu_player.volume_db = MENU_VOLUME_DB
+	add_child(_menu_player)
+	if ResourceLoader.exists(MENU_TRACK_PATH):
+		var menu_stream: AudioStream = load(MENU_TRACK_PATH)
+		_configure_loop(menu_stream)
+		_menu_player.stream = menu_stream
+
 
 func _configure_loop(stream: AudioStream) -> void:
 	if stream is AudioStreamOggVorbis or stream is AudioStreamMP3:
@@ -48,6 +58,7 @@ func _configure_loop(stream: AudioStream) -> void:
 
 
 func start() -> void:
+	stop_menu()
 	active = true
 	current_zone = 0
 	intensity = 0.0
@@ -61,6 +72,15 @@ func stop_all() -> void:
 	active = false
 	for p in players:
 		p.stop()
+
+
+func play_menu() -> void:
+	if _menu_player.stream != null and not _menu_player.playing:
+		_menu_player.play()
+
+
+func stop_menu() -> void:
+	_menu_player.stop()
 
 
 func set_zone(zone: int) -> void:

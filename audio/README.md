@@ -13,19 +13,23 @@ no placeholder tone — just silence for that one hook until it's filled in).
 Drop files in with these exact names and Godot will pick them up automatically
 — no code changes needed.
 
-## Music (`audio/music/`) — looping, one per zone
+## Music (`audio/music/`) — real tracks in use
 
-| File | Zone | Feel |
-|---|---|---|
-| `ruins_theme.ogg` | The Ruins (0–100m) | Bright, cheerful, adventurous — sky blue / fresh green mood |
-| `sky_theme.ogg` | The Sky (100–500m) | Uplifting, energetic, sun-drenched |
-| `void_theme.ogg` | The Void (500m+) | Mysterious, epic — purple/blue, not horror |
+| File | Used for |
+|---|---|
+| `velariomusic-happy-vibes-591803.mp3` | Menu |
+| `the_mountain-happy-happy-music-496549.mp3` | The Ruins (0–100m) |
+| `jorisvermeer-happy-adventure-quest-572050.mp3` | The Sky (100–500m) |
+| `the_mountain-fantasy-quest-184140.mp3` | The Void (500m+) |
 
-All three tracks play simultaneously at all times at runtime (silently, via
-volume, unless active) so they can crossfade smoothly — each file should be
-mixed to loop seamlessly and sit at a consistent perceived loudness so the
-crossfade doesn't feel like a volume jump between zones. `MusicManager`
-handles looping automatically for `.ogg`/`.mp3`/`.wav`.
+These are the exact, unmodified filenames as sourced — do not rename them;
+`MusicManager`'s path constants reference them directly.
+
+The three zone tracks play simultaneously at all times during gameplay
+(silently, via volume, unless active) so they can crossfade smoothly. The
+menu track plays on its own dedicated player, independent of the zone
+crossfade, starting on `MainMenu` and stopping automatically when gameplay
+starts. `MusicManager` handles looping automatically for `.ogg`/`.mp3`/`.wav`.
 
 ## SFX (`audio/sfx/`) — one-shot
 
