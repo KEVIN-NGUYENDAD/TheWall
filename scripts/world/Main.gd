@@ -7,6 +7,10 @@ const MOVING_PLATFORM_SCENE: PackedScene = preload("res://scenes/world/MovingPla
 const COLLAPSING_PLATFORM_SCENE: PackedScene = preload("res://scenes/world/CollapsingPlatform.tscn")
 const FAKE_PLATFORM_SCENE: PackedScene = preload("res://scenes/world/FakePlatform.tscn")
 const TRAP_PLATFORM_SCENE: PackedScene = preload("res://scenes/world/TrapPlatform.tscn")
+const ROCK_PLATFORM_SCENE: PackedScene = preload("res://scenes/world/RockPlatform.tscn")
+const ICE_CHUNK_PLATFORM_SCENE: PackedScene = preload("res://scenes/world/IceChunkPlatform.tscn")
+const FLOATING_STONE_PLATFORM_SCENE: PackedScene = preload("res://scenes/world/FloatingStonePlatform.tscn")
+const BROKEN_PLATFORM_SCENE: PackedScene = preload("res://scenes/world/BrokenPlatform.tscn")
 const CHECKPOINT_SCENE: PackedScene = preload("res://scenes/world/Checkpoint.tscn")
 const COIN_SCENE: PackedScene = preload("res://scenes/world/Coin.tscn")
 const SPIKE_SCENE: PackedScene = preload("res://scenes/world/Spike.tscn")
@@ -197,6 +201,32 @@ const CLARITY_REACHABILITY_SAFETY_MARGIN: float = 0.6
 const CLARITY_WIDTH_WEIGHTS: Dictionary = {
 	"medium": 0.45, "long": 0.4, "xlong": 0.15,
 }
+
+# Real Platform Game Pass: the main chain above is still the guaranteed
+# "safe route" — always present, unchanged. Alongside it, an optional
+# side branch sometimes appears roughly halfway to the next main platform,
+# built from small environmental stepping stones (rock/ice/floating stone/
+# broken slab) rather than the main platform look, so it visually reads as
+# a distinct, optional path rather than a continuation of the staircase.
+# Never spawned unless the return hop onto the next main platform is
+# ALSO safely reachable — a branch that could dead-end is simply skipped
+# that step, so "always a safe way back" holds by construction, not by luck.
+# A higher-fraction roll (closer to the next platform's height, bigger single
+# jump) reads as the riskier "shortcut" flavor; a lower-fraction roll reads
+# as the gentler "reward detour" flavor — both are optional, both carry a
+# coin, and the plain next-platform jump is always still there either way.
+const BRANCH_PLATFORM_SCENES: Array = [
+	ROCK_PLATFORM_SCENE, ICE_CHUNK_PLATFORM_SCENE, FLOATING_STONE_PLATFORM_SCENE, BROKEN_PLATFORM_SCENE,
+]
+const BRANCH_CHANCE: float = 0.4
+const BRANCH_CHANCE_CLARITY: float = 0.25
+const BRANCH_MAX_SIDE_OFFSET: float = 150.0
+const BRANCH_MIN_SIDE_OFFSET: float = 40.0
+const BRANCH_GAP_FRACTION_RANGE: Vector2 = Vector2(0.45, 0.6)
+const BRANCH_SHORTCUT_CHANCE: float = 0.3
+const BRANCH_SHORTCUT_GAP_FRACTION_RANGE: Vector2 = Vector2(0.75, 0.9)
+const BRANCH_REACHABILITY_SAFETY_MARGIN: float = 0.8
+const BRANCH_COIN_CHANCE: float = 0.8
 
 # Lives: 3 per run by default (+1 with the Extra Heart upgrade). Hitting 0
 # shows Game Over (Continue refills to max and resumes at the checkpoint;
@@ -416,6 +446,8 @@ func _generate_platforms() -> float:
 			# ever rise so far (see _max_reachable_horizontal), so no gap is
 			# ever allowed past that no matter what the range above rolls.
 			gap_px = min(gap_px, MAX_SAFE_VERTICAL_GAP)
+			var from_x: float = x
+			var from_y: float = y
 			y -= gap_px
 
 			# Never place a platform combination that's physically impossible
@@ -429,7 +461,63 @@ func _generate_platforms() -> float:
 			var max_shift: float = min(shift_budget, max_safe_shift)
 			x = clamp(x + randf_range(-max_shift, max_shift), EDGE_MARGIN, VIEWPORT_WIDTH - EDGE_MARGIN)
 
+			if i > 0 and height >= SAFE_ZONE_HEIGHT_M:
+				_maybe_spawn_branch(from_x, from_y, x, y, height, in_clarity_zone)
+
 	return y
+
+
+# Optional side branch between two consecutive main-path ("safe route")
+# platforms, built from small environmental stepping stones. Only ever
+# placed if BOTH hops — current platform -> branch, and branch -> the next
+# main platform — are independently within the same physics-based
+# reachability cap the main chain uses, so a branch can never strand the
+# player; skipping it silently when the geometry doesn't allow a safe
+# return is what guarantees "no dead ends" here, not luck.
+func _maybe_spawn_branch(from_x: float, from_y: float, to_x: float, to_y: float, height: float, in_clarity_zone: bool) -> void:
+	var chance: float = BRANCH_CHANCE_CLARITY if in_clarity_zone else BRANCH_CHANCE
+	if randf() >= chance:
+		return
+
+	# Lean the branch to whichever side the main path ISN'T already headed,
+	# so it reads as a distinct route rather than a continuation of the
+	# same diagonal line.
+	var main_shift: float = to_x - from_x
+	var side: float = -1.0 if main_shift >= 0.0 else 1.0
+	if abs(main_shift) < 20.0:
+		side = -1.0 if randf() < 0.5 else 1.0
+
+	var full_gap: float = from_y - to_y
+	var is_shortcut: bool = randf() < BRANCH_SHORTCUT_CHANCE
+	var fraction_range: Vector2 = BRANCH_SHORTCUT_GAP_FRACTION_RANGE if is_shortcut else BRANCH_GAP_FRACTION_RANGE
+	var branch_gap: float = full_gap * randf_range(fraction_range.x, fraction_range.y)
+	var branch_y: float = from_y - branch_gap
+
+	var margin: float = CLARITY_REACHABILITY_SAFETY_MARGIN if in_clarity_zone else BRANCH_REACHABILITY_SAFETY_MARGIN
+	var out_max_shift: float = min(BRANCH_MAX_SIDE_OFFSET, _max_reachable_horizontal(branch_gap) * margin)
+	if out_max_shift < BRANCH_MIN_SIDE_OFFSET:
+		return
+	var branch_shift: float = randf_range(BRANCH_MIN_SIDE_OFFSET, out_max_shift)
+	var branch_x: float = clamp(from_x + side * branch_shift, EDGE_MARGIN, VIEWPORT_WIDTH - EDGE_MARGIN)
+
+	# The return hop (branch -> the next main-path platform) must ALSO be
+	# safely reachable, or this branch would be a dead end — skip it rather
+	# than ever place one that isn't.
+	var return_gap: float = branch_y - to_y
+	if return_gap < 0.0:
+		return
+	var return_max_shift: float = _max_reachable_horizontal(return_gap) * margin
+	if abs(to_x - branch_x) > return_max_shift:
+		return
+
+	var scene: PackedScene = BRANCH_PLATFORM_SCENES[randi() % BRANCH_PLATFORM_SCENES.size()]
+	var branch: Node2D = scene.instantiate()
+	branch.position = Vector2(branch_x, branch_y)
+	add_child(branch)
+	branch.modulate = SEASON_PLATFORM_MODULATE[_get_level_index(height)]
+
+	if randf() < BRANCH_COIN_CHANCE:
+		_spawn_coin(Vector2(branch_x, branch_y - 45.0))
 
 
 # Max horizontal distance reachable at max charge for a given vertical gap

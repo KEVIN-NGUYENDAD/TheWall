@@ -1,0 +1,34 @@
+[gd_scene load_steps=2 format=3]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_1"]
+size = Vector2(130, 24)
+
+[node name="IceChunkPlatform" type="StaticBody2D"]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("RectangleShape2D_1")
+
+[node name="SideDepth" type="Polygon2D" parent="."]
+color = Color(0.35, 0.55, 0.65, 0.5)
+antialiased = true
+polygon = PackedVector2Array(-58, 12, 58, 12, 52, 20, -52, 20)
+
+[node name="Polygon2D" type="Polygon2D" parent="."]
+color = Color(0.75, 0.9, 0.98, 0.95)
+antialiased = true
+polygon = PackedVector2Array(-65, 0, -35, -14, 0, -12, 35, -15, 65, -2, 65, 12, -65, 12)
+
+[node name="BottomShadow" type="Polygon2D" parent="."]
+color = Color(0.15, 0.3, 0.4, 0.4)
+antialiased = true
+polygon = PackedVector2Array(-65, 4, 65, 4, 65, 12, -65, 12)
+
+[node name="Facet" type="Polygon2D" parent="."]
+color = Color(1, 1, 1, 0.55)
+antialiased = true
+polygon = PackedVector2Array(-35, -14, 0, -12, -5, -3, -30, -4)
+
+[node name="TopHighlight" type="Polygon2D" parent="."]
+color = Color(1, 1, 1, 0.5)
+antialiased = true
+polygon = PackedVector2Array(-35, -14, 0, -12, 35, -15, 30, -9, -30, -8)
