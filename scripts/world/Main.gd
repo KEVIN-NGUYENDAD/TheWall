@@ -48,43 +48,45 @@ const SPAWN_PLATFORM_SCALE: Vector2 = Vector2(2.0, 1.0)
 
 const FAKE_PLATFORM_CHANCE: float = 0.05
 
-# Level system: Level N = N-th 300/100m-ish band, each a bit harder than the
-# last (more moving/collapsing/trap platforms). Bands match the Season bands.
-# Base rates halved overall from the previous pass per balance feedback —
-# Medium's multiplier below stays at 1.0 ("current balance" relative to this
-# new, gentler baseline), while Hard's multipliers were raised to compensate
-# so Hard stays roughly as challenging as before.
-const LEVEL_HEIGHTS: Array = [0.0, 100.0, 300.0, 600.0, 900.0]
-const LEVEL_MOVING_CHANCE: Array = [0.05, 0.07, 0.09, 0.11, 0.13]
-const LEVEL_COLLAPSING_CHANCE: Array = [0.04, 0.055, 0.075, 0.095, 0.115]
-const LEVEL_TRAP_CHANCE: Array = [0.0, 0.015, 0.025, 0.035, 0.045]
+# Level system: Level N = N-th band, each following the Season difficulty
+# philosophy below rather than a flat increasing curve — pretty weather
+# isn't always easy. Bands match the Season bands (SEASON_NAMES) exactly.
+# Spring is easiest; Summer spikes harder than Winter/Autumn's "medium"
+# plateau; Storm is the hardest. Medium's multiplier below stays at 1.0
+# relative to this shared baseline; Easy/Hard scale it down/up further.
+const LEVEL_HEIGHTS: Array = [0.0, 100.0, 250.0, 450.0, 700.0]
+const LEVEL_MOVING_CHANCE: Array = [0.04, 0.10, 0.08, 0.09, 0.15]
+const LEVEL_COLLAPSING_CHANCE: Array = [0.03, 0.085, 0.06, 0.07, 0.13]
+const LEVEL_TRAP_CHANCE: Array = [0.0, 0.03, 0.02, 0.025, 0.055]
 
 # Platform colors are fixed per TYPE (not per zone) so players can recognize
 # hazards at a glance: green=normal, blue=moving, yellow=collapsing,
 # purple=fake, red=trap. Season only applies a light modulate tint on top.
-const SEASON_NAMES: Array = ["SPRING", "SUMMER", "AUTUMN", "WINTER", "STORM"]
-const SEASON_FRICTION_MULT: Array = [1.0, 1.0, 1.0, 0.6, 0.35]
+# Reordered so players see snow sooner: Spring -> Summer -> Winter -> Autumn
+# -> Storm (was Spring/Summer/Autumn/Winter/Storm).
+const SEASON_NAMES: Array = ["SPRING", "SUMMER", "WINTER", "AUTUMN", "STORM"]
+const SEASON_FRICTION_MULT: Array = [1.0, 1.0, 0.7, 1.0, 0.35]
 const SEASON_PLATFORM_MODULATE: Array = [
-	Color(1, 1, 1), Color(1, 1, 1), Color(1, 1, 1),
-	Color(0.82, 0.92, 1.0), Color(0.75, 0.8, 0.88),
+	Color(1, 1, 1), Color(1, 1, 1),
+	Color(0.82, 0.92, 1.0), Color(1.0, 0.9, 0.75), Color(0.75, 0.8, 0.88),
 ]
 const WEATHER_INTERVAL: Dictionary = {
-	0: 2.4, 1: 0.0, 2: 1.0, 3: 0.9, 4: 0.35,
+	0: 4.8, 1: 0.0, 2: 0.9, 3: 1.0, 4: 0.35,
 }
 const THUNDER_INTERVAL_MIN: float = 6.0
 const THUNDER_INTERVAL_MAX: float = 14.0
 const FLOWER_CHANCE: float = 0.2
 
 # Difficulty modes: multipliers applied on top of the base level curve.
-# Hotfix pass: Medium/Hard stay put (Medium == previous Easy, Hard ==
-# previous Medium, per the standing instruction that those two are already
-# right) — only Easy was cut another 50% (traps/eagles/gaps) for even
-# safer jumps and more recovery room.
-const DIFFICULTY_TRAP_MULT: Dictionary = {"EASY": 0.125, "MEDIUM": 0.5, "HARD": 1.0}
-const DIFFICULTY_HAZARD_MULT: Dictionary = {"EASY": 0.125, "MEDIUM": 0.5, "HARD": 1.0}
-const DIFFICULTY_GAP_MULT: Dictionary = {"EASY": 0.55, "MEDIUM": 0.8, "HARD": 1.0}
+# Medium/Hard stay put (Medium == previous Easy, Hard == previous Medium,
+# per the standing instruction that those two are already right) — only
+# Easy was cut another 50% (traps/eagles/gaps) for even safer jumps and
+# more recovery room.
+const DIFFICULTY_TRAP_MULT: Dictionary = {"EASY": 0.0625, "MEDIUM": 0.5, "HARD": 1.0}
+const DIFFICULTY_HAZARD_MULT: Dictionary = {"EASY": 0.0625, "MEDIUM": 0.5, "HARD": 1.0}
+const DIFFICULTY_GAP_MULT: Dictionary = {"EASY": 0.5, "MEDIUM": 0.8, "HARD": 1.0}
 const DIFFICULTY_BIRD_INTERVAL_MULT: Dictionary = {"EASY": 0.6, "MEDIUM": 1.0, "HARD": 1.6}
-const DIFFICULTY_EAGLE_CHANCE_MULT: Dictionary = {"EASY": 0.125, "MEDIUM": 0.5, "HARD": 1.0}
+const DIFFICULTY_EAGLE_CHANCE_MULT: Dictionary = {"EASY": 0.0625, "MEDIUM": 0.5, "HARD": 1.0}
 const EAGLE_BASE_CHANCE: float = 0.25
 
 # Coin-reward power-ups (Shop).
@@ -555,7 +557,7 @@ func _setup_ambience_timers() -> void:
 	common_bird_timer.one_shot = true
 	add_child(common_bird_timer)
 	common_bird_timer.timeout.connect(_on_common_bird_timer)
-	_restart_bird_timer(common_bird_timer, 5.0, 10.0)
+	_restart_bird_timer(common_bird_timer, 10.0, 20.0)
 
 	special_bird_timer = Timer.new()
 	special_bird_timer.one_shot = true
@@ -637,7 +639,7 @@ func _on_common_bird_timer() -> void:
 	if not is_dead:
 		var from_left: bool = randf() < 0.5
 		_spawn_common_bird_from(_bird_spawn_position(from_left), 1.0 if from_left else -1.0)
-	_restart_bird_timer(common_bird_timer, 5.0, 10.0)
+	_restart_bird_timer(common_bird_timer, 10.0, 20.0)
 
 
 func _on_special_bird_timer() -> void:
@@ -730,9 +732,9 @@ func _spawn_weather_particle(level_idx: int) -> void:
 		0:
 			scene = BUTTERFLY_SCENE
 		2:
-			scene = LEAF_SCENE
-		3:
 			scene = SNOWFLAKE_SCENE
+		3:
+			scene = LEAF_SCENE
 		4:
 			scene = RAINDROP_SCENE
 	if scene == null:

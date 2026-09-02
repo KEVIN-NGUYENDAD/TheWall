@@ -8,23 +8,26 @@ extends Node
 # See audio/README.md for the current track mapping.
 
 const CROSSFADE_TIME: float = 4.0
-# Hotfix pass: still too loud. Cut to ~1/3 of the previous level again — SFX
-# volumes in AudioManager are untouched.
-# (-20.5dB -> -30.0dB is roughly a further 1/3 linear-loudness reduction.)
-const SEASON_VOLUME_DB: float = -30.0
+# Still too loud per continued feedback. Cut to ~1/3 of the previous level
+# again — SFX volumes in AudioManager are untouched.
+# (-30.0dB -> -40.0dB is roughly a further 1/3 linear-loudness reduction.)
+const SEASON_VOLUME_DB: float = -40.0
 const SILENT_DB: float = -80.0
 
 # Only 3 real tracks exist; adjacent seasons share one so the whole climb
-# still moves through a clear 3-act arc (bright -> energetic -> epic).
+# still moves through a clear 3-act arc (bright -> energetic -> epic). Index
+# here is the level/season index — seasons were reordered in Main.gd
+# (Spring/Summer/Winter/Autumn/Storm) but which physical track plays at
+# which index is unchanged.
 const SEASON_TRACK_PATHS: Array = [
 	"res://audio/music/the_mountain-happy-happy-music-496549.mp3", # Spring
 	"res://audio/music/the_mountain-happy-happy-music-496549.mp3", # Summer
-	"res://audio/music/jorisvermeer-happy-adventure-quest-572050.mp3", # Autumn
-	"res://audio/music/the_mountain-fantasy-quest-184140.mp3", # Winter
+	"res://audio/music/jorisvermeer-happy-adventure-quest-572050.mp3", # Winter
+	"res://audio/music/the_mountain-fantasy-quest-184140.mp3", # Autumn
 	"res://audio/music/the_mountain-fantasy-quest-184140.mp3", # Storm
 ]
 const MENU_TRACK_PATH: String = "res://audio/music/velariomusic-happy-vibes-591803.mp3"
-const MENU_VOLUME_DB: float = -30.0
+const MENU_VOLUME_DB: float = -40.0
 
 var _season_streams: Array = []
 var _player_a: AudioStreamPlayer

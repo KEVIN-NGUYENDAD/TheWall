@@ -61,7 +61,7 @@ offset_left = -234.0
 offset_top = 72.0
 offset_right = -12.0
 offset_bottom = 104.0
-color = Color(0.05, 0.08, 0.15, 0.55)
+color = Color(0.02, 0.04, 0.1, 0.8)
 
 [node name="SeasonLabel" type="Label" parent="."]
 anchor_left = 1.0
