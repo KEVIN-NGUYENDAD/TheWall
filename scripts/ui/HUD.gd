@@ -21,7 +21,6 @@ const SEASON_DISPLAY: Dictionary = {
 @onready var season_label: Label = $SeasonLabel
 @onready var lives_label: Label = $LivesLabel
 @onready var level_label: Label = $LevelLabel
-@onready var level_progress_fill: ColorRect = $LevelProgressBorder/LevelProgressBG/LevelProgressFill
 @onready var charge_label: Label = $ChargeLabel
 @onready var charge_bar_fill: ColorRect = $ChargeBarBG/ChargeBarFill
 @onready var toast: Panel = $Toast
@@ -44,9 +43,8 @@ func set_height(current: int, best: int) -> void:
 	best_label.text = "Best: %d m" % best
 
 
-func set_level_progress(level: int, ratio: float) -> void:
+func set_level_progress(level: int, _ratio: float) -> void:
 	level_label.text = "Level %d → %d" % [level, level + 1]
-	level_progress_fill.anchor_right = clamp(ratio, 0.0, 1.0)
 
 
 func set_coins(total: int) -> void:
@@ -58,7 +56,11 @@ func set_season(season_name: String) -> void:
 
 
 func set_lives(current: int, max_lives: int) -> void:
-	lives_label.text = "❤".repeat(max(current, 0)) + "🖤".repeat(max(max_lives - current, 0))
+	# Final Gameplay Bug Pass: 🖤 (U+1F5A4, emoji-only) isn't in Godot's
+	# default font and rendered as nothing, so lost hearts were invisible
+	# and the bar always looked full. ♥/♡ are plain dingbats every font
+	# (including the built-in one) covers.
+	lives_label.text = "♥".repeat(max(current, 0)) + "♡".repeat(max(max_lives - current, 0))
 
 
 func set_charge(ratio: float) -> void:

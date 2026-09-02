@@ -74,7 +74,11 @@ const FAKE_PLATFORM_CHANCE: float = 0.05
 # the difficulty-uniformity rework folded Easy's old -60% hazard reduction
 # into this one shared curve without also lowering the curve itself.
 const LEVEL_HEIGHTS: Array = [0.0, 100.0, 250.0, 450.0, 700.0]
-const LEVEL_MOVING_CHANCE: Array = [0.02, 0.03, 0.045, 0.06, 0.08]
+# Final Gameplay Bug Pass: moving platforms are a timing challenge, not a
+# hazard (they don't hurt the player), so their rate is set directly by
+# difficulty rather than the level curve below — Easy 20% / Medium 35% /
+# Hard 50% of eligible platforms, as requested.
+const DIFFICULTY_MOVING_CHANCE: Dictionary = {"EASY": 0.3, "MEDIUM": 0.45, "HARD": 0.6}
 const LEVEL_COLLAPSING_CHANCE: Array = [0.015, 0.025, 0.035, 0.05, 0.07]
 const LEVEL_TRAP_CHANCE: Array = [0.0, 0.0075, 0.015, 0.0225, 0.0325]
 
@@ -91,6 +95,20 @@ const SEASON_FRICTION_MULT: Array = [0.7, 0.8, 1.0, 1.0, 0.6]
 const SEASON_PLATFORM_MODULATE: Array = [
 	Color(0.82, 0.92, 1.0), Color(0.75, 0.8, 0.88),
 	Color(1.0, 0.97, 1.0), Color(1.0, 1.0, 0.9), Color(1.0, 0.85, 0.55),
+]
+# Real Gameplay Pass: plain "normal" platforms all looked identical aside
+# from the season wash. A random per-spawn multiply on top of that (still
+# season-tinted, just also green/dark-green/icy/stone/weathered) breaks up
+# the repetition without needing new scenes or a new platform type.
+# Final Gameplay Bug Fix Pass: pushed each tint further from neutral so the
+# materials actually read as distinct instead of subtle brightness shifts.
+# "Ice" deliberately stays pale/low-saturation rather than true saturated
+# blue — that hue is reserved for "moving platform" in the hazard color
+# code (green=normal, blue=moving, yellow=collapsing, purple=fake, red=trap),
+# and a normal platform reading as moving-blue is exactly the kind of
+# confusion Bug 2 asks to remove.
+const PLATFORM_VARIANT_TINTS: Array = [
+	Color(1.0, 1.0, 1.0), Color(0.42, 0.58, 0.38), Color(1.4, 1.0, 1.7), Color(1.35, 0.62, 1.05), Color(0.85, 0.65, 0.4),
 ]
 # True 2.5D Visual Pass: sky color and a full-screen color wash both tween
 # per season change, so the season reads at a glance without the HUD label
@@ -143,8 +161,8 @@ const STORM_WIND_INTENSITY_MULT: float = 2.4
 # Final Hotfix: the only difficulty-specific knobs left are trap chance and
 # eagle chance (Easy fewer, Medium normal, Hard more) — everything about
 # platform generation itself (width, gap, spacing, layout) is now shared.
-const DIFFICULTY_TRAP_MULT: Dictionary = {"EASY": 0.3, "MEDIUM": 1.0, "HARD": 1.6}
-const DIFFICULTY_EAGLE_CHANCE_MULT: Dictionary = {"EASY": 0.3, "MEDIUM": 1.0, "HARD": 1.6}
+const DIFFICULTY_TRAP_MULT: Dictionary = {"EASY": 0.105, "MEDIUM": 1.0, "HARD": 1.6}
+const DIFFICULTY_EAGLE_CHANCE_MULT: Dictionary = {"EASY": 0.105, "MEDIUM": 1.0, "HARD": 1.6}
 const EAGLE_BASE_CHANCE: float = 0.125
 
 # Platforms are no longer one fixed size — width is picked per spawn from 4
@@ -160,11 +178,14 @@ const BASE_PLATFORM_WIDTH: float = 160.0
 # has its selection frequency cut in half, redistributed proportionally to
 # the other three.
 const WIDTH_CATEGORY_RANGES: Dictionary = {
-	"short": Vector2(120.0, 160.0), "medium": Vector2(160.0, 220.0),
-	"long": Vector2(220.0, 320.0), "xlong": Vector2(320.0, 450.0),
+	"short": Vector2(120.0, 130.0), "medium": Vector2(130.0, 155.0),
+	"long": Vector2(155.0, 185.0), "xlong": Vector2(185.0, 220.0),
 }
+# Final Gameplay Bug Fix Pass: long/xlong were the majority pick (52.5%),
+# reading as repetitive "runway" platforms — flipped the balance toward
+# short/medium instead.
 const PLATFORM_WIDTH_WEIGHTS: Dictionary = {
-	"short": 0.125, "medium": 0.35, "long": 0.35, "xlong": 0.175,
+	"short": 0.2, "medium": 0.45, "long": 0.25, "xlong": 0.1,
 }
 
 # Full baseline horizontal shift budget (VIEWPORT_WIDTH - 2*EDGE_MARGIN),
@@ -203,29 +224,46 @@ const CLARITY_WIDTH_WEIGHTS: Dictionary = {
 }
 
 # Real Platform Game Pass: the main chain above is still the guaranteed
-# "safe route" — always present, unchanged. Alongside it, an optional
-# side branch sometimes appears roughly halfway to the next main platform,
-# built from small environmental stepping stones (rock/ice/floating stone/
-# broken slab) rather than the main platform look, so it visually reads as
-# a distinct, optional path rather than a continuation of the staircase.
-# Never spawned unless the return hop onto the next main platform is
-# ALSO safely reachable — a branch that could dead-end is simply skipped
-# that step, so "always a safe way back" holds by construction, not by luck.
-# A higher-fraction roll (closer to the next platform's height, bigger single
-# jump) reads as the riskier "shortcut" flavor; a lower-fraction roll reads
-# as the gentler "reward detour" flavor — both are optional, both carry a
-# coin, and the plain next-platform jump is always still there either way.
-const BRANCH_PLATFORM_SCENES: Array = [
-	ROCK_PLATFORM_SCENE, ICE_CHUNK_PLATFORM_SCENE, FLOATING_STONE_PLATFORM_SCENE, BROKEN_PLATFORM_SCENE,
-]
-const BRANCH_CHANCE: float = 0.4
-const BRANCH_CHANCE_CLARITY: float = 0.25
+# "Main Route" — always present, easy to see, unchanged. Alongside it, an
+# optional side branch sometimes appears roughly midway to the next main
+# platform, built from small environmental stepping stones (rock/ice/
+# floating stone/broken slab) rather than the main platform look, so it
+# visually reads as a distinct, optional path rather than a continuation
+# of the staircase. Never spawned unless the return hop onto the next main
+# platform is ALSO safely reachable — a branch that could dead-end is
+# simply skipped that step, so "always a safe way back" holds by
+# construction, not by luck.
+# Each branch is one of 3 named flavors (rolled per spawn): Coin Route
+# (gentle detour, extra coins), Bird Route (a guaranteed bonus bird,
+# rewards exploring off the main line), Shortcut Route (bigger single jump
+# close to the next platform's height, needs better timing/charge). All
+# three share the exact same outbound+return reachability guarantee.
+# Creativity Pass: each route gets its own environmental piece (shape, not
+# just color) so it's recognizable at a glance — rock (sturdy) for Coin,
+# floating stone (airy) for Bird, ice chunk (slick, fast) for Shortcut.
+const BRANCH_ROUTE_SCENES: Dictionary = {
+	"coin": ROCK_PLATFORM_SCENE, "bird": FLOATING_STONE_PLATFORM_SCENE, "shortcut": ICE_CHUNK_PLATFORM_SCENE,
+}
+# Bumped so a branch choice shows up on nearly every screen, not just often.
+const BRANCH_CHANCE: float = 0.75
+const BRANCH_CHANCE_CLARITY: float = 0.55
+# Chance to ALSO try the opposite side after the primary branch roll above,
+# for genuine left+center+right moments (see _try_spawn_branch_side).
+const BRANCH_SECOND_SIDE_CHANCE: float = 0.35
 const BRANCH_MAX_SIDE_OFFSET: float = 150.0
 const BRANCH_MIN_SIDE_OFFSET: float = 40.0
-const BRANCH_GAP_FRACTION_RANGE: Vector2 = Vector2(0.45, 0.6)
-const BRANCH_SHORTCUT_CHANCE: float = 0.3
+const BRANCH_COIN_GAP_FRACTION_RANGE: Vector2 = Vector2(0.4, 0.55)
+const BRANCH_BIRD_GAP_FRACTION_RANGE: Vector2 = Vector2(0.5, 0.65)
 const BRANCH_SHORTCUT_GAP_FRACTION_RANGE: Vector2 = Vector2(0.75, 0.9)
+const BRANCH_ROUTE_WEIGHTS: Dictionary = {"coin": 0.4, "bird": 0.3, "shortcut": 0.3}
+# Creativity Pass: each route reads visually distinct at a glance (gold=coin,
+# sky=bird, ember=shortcut) so the player can choose before reaching the
+# reward, not just react once they're on top of it.
+const BRANCH_ROUTE_TINTS: Dictionary = {
+	"coin": Color(1.15, 1.0, 0.6), "bird": Color(0.7, 0.88, 1.15), "shortcut": Color(1.2, 0.62, 0.45),
+}
 const BRANCH_REACHABILITY_SAFETY_MARGIN: float = 0.8
+const BRANCH_COIN_ROUTE_COIN_COUNT: int = 2
 const BRANCH_COIN_CHANCE: float = 0.8
 
 # Lives: 3 per run by default (+1 with the Extra Heart upgrade). Hitting 0
@@ -476,20 +514,34 @@ func _generate_platforms() -> float:
 # return is what guarantees "no dead ends" here, not luck.
 func _maybe_spawn_branch(from_x: float, from_y: float, to_x: float, to_y: float, height: float, in_clarity_zone: bool) -> void:
 	var chance: float = BRANCH_CHANCE_CLARITY if in_clarity_zone else BRANCH_CHANCE
-	if randf() >= chance:
-		return
 
-	# Lean the branch to whichever side the main path ISN'T already headed,
-	# so it reads as a distinct route rather than a continuation of the
-	# same diagonal line.
+	# Lean the primary branch to whichever side the main path ISN'T already
+	# headed, so it reads as a distinct route rather than a continuation of
+	# the same diagonal line.
 	var main_shift: float = to_x - from_x
-	var side: float = -1.0 if main_shift >= 0.0 else 1.0
+	var preferred_side: float = -1.0 if main_shift >= 0.0 else 1.0
 	if abs(main_shift) < 20.0:
-		side = -1.0 if randf() < 0.5 else 1.0
+		preferred_side = -1.0 if randf() < 0.5 else 1.0
+
+	if randf() < chance:
+		_try_spawn_branch_side(from_x, from_y, to_x, to_y, height, in_clarity_zone, preferred_side)
+
+	# Path Design: occasionally populate the OTHER side too, so the player
+	# sometimes sees three real lanes at once (left route / center main path
+	# / right route) instead of only ever one optional branch.
+	if randf() < BRANCH_SECOND_SIDE_CHANCE:
+		_try_spawn_branch_side(from_x, from_y, to_x, to_y, height, in_clarity_zone, -preferred_side)
+
+
+func _try_spawn_branch_side(from_x: float, from_y: float, to_x: float, to_y: float, height: float, in_clarity_zone: bool, side: float) -> void:
+	var route: String = _pick_branch_route()
+	var fraction_range: Vector2 = BRANCH_COIN_GAP_FRACTION_RANGE
+	if route == "bird":
+		fraction_range = BRANCH_BIRD_GAP_FRACTION_RANGE
+	elif route == "shortcut":
+		fraction_range = BRANCH_SHORTCUT_GAP_FRACTION_RANGE
 
 	var full_gap: float = from_y - to_y
-	var is_shortcut: bool = randf() < BRANCH_SHORTCUT_CHANCE
-	var fraction_range: Vector2 = BRANCH_SHORTCUT_GAP_FRACTION_RANGE if is_shortcut else BRANCH_GAP_FRACTION_RANGE
 	var branch_gap: float = full_gap * randf_range(fraction_range.x, fraction_range.y)
 	var branch_y: float = from_y - branch_gap
 
@@ -510,14 +562,32 @@ func _maybe_spawn_branch(from_x: float, from_y: float, to_x: float, to_y: float,
 	if abs(to_x - branch_x) > return_max_shift:
 		return
 
-	var scene: PackedScene = BRANCH_PLATFORM_SCENES[randi() % BRANCH_PLATFORM_SCENES.size()]
+	var scene: PackedScene = BRANCH_ROUTE_SCENES[route]
 	var branch: Node2D = scene.instantiate()
 	branch.position = Vector2(branch_x, branch_y)
 	add_child(branch)
-	branch.modulate = SEASON_PLATFORM_MODULATE[_get_level_index(height)]
+	branch.modulate = SEASON_PLATFORM_MODULATE[_get_level_index(height)] * BRANCH_ROUTE_TINTS[route]
 
-	if randf() < BRANCH_COIN_CHANCE:
-		_spawn_coin(Vector2(branch_x, branch_y - 45.0))
+	if route == "coin":
+		for c in range(BRANCH_COIN_ROUTE_COIN_COUNT):
+			_spawn_coin(Vector2(branch_x + (c - 0.5) * 30.0, branch_y - 45.0))
+	elif route == "bird":
+		_spawn_common_bird_from(Vector2(branch_x, branch_y - 90.0), side)
+		if randf() < BRANCH_COIN_CHANCE:
+			_spawn_coin(Vector2(branch_x, branch_y - 45.0))
+	else:
+		if randf() < BRANCH_COIN_CHANCE:
+			_spawn_coin(Vector2(branch_x, branch_y - 45.0))
+
+
+func _pick_branch_route() -> String:
+	var roll: float = randf()
+	var cumulative: float = 0.0
+	for route in BRANCH_ROUTE_WEIGHTS:
+		cumulative += BRANCH_ROUTE_WEIGHTS[route]
+		if roll < cumulative:
+			return route
+	return "coin"
 
 
 # Max horizontal distance reachable at max charge for a given vertical gap
@@ -573,9 +643,12 @@ func _spawn_platform_variant(i: int, x: float, y: float, height: float) -> Dicti
 		var trap_mult: float = DIFFICULTY_TRAP_MULT.get(difficulty, 1.0)
 		# No fake platforms in the clarity zone — a real platform that looks
 		# fake (or vice versa) is exactly the "hidden platform" confusion the
-		# first 100m must never create.
-		var fake_chance: float = 0.0 if height < CLARITY_ZONE_HEIGHT_M else FAKE_PLATFORM_CHANCE
-		var moving_chance: float = clamp(LEVEL_MOVING_CHANCE[level_idx], 0.0, 0.9)
+		# first 100m must never create. Past that, Easy also scales fake
+		# platforms down with trap_mult — deception reads as "unfair
+		# confusion," not "challenge," so it's the one hazard Easy should
+		# always cut even though the shared layout stays identical.
+		var fake_chance: float = 0.0 if height < CLARITY_ZONE_HEIGHT_M else FAKE_PLATFORM_CHANCE * trap_mult
+		var moving_chance: float = clamp(DIFFICULTY_MOVING_CHANCE.get(difficulty, 0.35), 0.0, 0.9)
 		var collapsing_chance: float = clamp(LEVEL_COLLAPSING_CHANCE[level_idx], 0.0, 0.9)
 		var trap_chance: float = clamp(LEVEL_TRAP_CHANCE[level_idx] * trap_mult, 0.0, 0.9)
 
@@ -599,6 +672,8 @@ func _spawn_platform_variant(i: int, x: float, y: float, height: float) -> Dicti
 		platform.scale.x *= _pick_platform_width(height < CLARITY_ZONE_HEIGHT_M) / BASE_PLATFORM_WIDTH
 	add_child(platform)
 	platform.modulate = SEASON_PLATFORM_MODULATE[_get_level_index(height)]
+	if ptype == "normal":
+		platform.modulate *= PLATFORM_VARIANT_TINTS[randi() % PLATFORM_VARIANT_TINTS.size()]
 
 	if ptype == "trap":
 		platform.player_hit.connect(_on_trap_hit)
