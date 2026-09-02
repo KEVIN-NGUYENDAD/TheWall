@@ -44,7 +44,7 @@ const CHECKPOINT_INTERVAL_M: int = 100
 # Coin density cut further (0.315 -> 0.22) — fewer coins, but each is more
 # visually prominent now (see Coin.gd glow/sparkle bump).
 const COIN_CHANCE: float = 0.22
-const SPIKE_CHANCE: float = 0.1
+const SPIKE_CHANCE: float = 0.05
 const NEAR_MISS_METERS: float = 5.0
 const EAGLE_MIN_HEIGHT_M: float = 100.0
 const COMMON_BIRD_SCALE: float = 1.4
@@ -64,10 +64,15 @@ const FAKE_PLATFORM_CHANCE: float = 0.05
 # (still easy — mostly for exploring the new weather) -> Spring (medium) ->
 # Summer (harder) -> Autumn (hardest). Medium's multiplier below stays at
 # 1.0 as the balanced baseline; Easy/Hard scale it down/up from there.
+# Final Balance Hotfix: this whole shared baseline curve (same for every
+# difficulty — only DIFFICULTY_TRAP_MULT/DIFFICULTY_EAGLE_CHANCE_MULT scale
+# on top of it) was cut in half; overall difficulty had crept back up after
+# the difficulty-uniformity rework folded Easy's old -60% hazard reduction
+# into this one shared curve without also lowering the curve itself.
 const LEVEL_HEIGHTS: Array = [0.0, 100.0, 250.0, 450.0, 700.0]
-const LEVEL_MOVING_CHANCE: Array = [0.04, 0.06, 0.09, 0.12, 0.16]
-const LEVEL_COLLAPSING_CHANCE: Array = [0.03, 0.05, 0.07, 0.10, 0.14]
-const LEVEL_TRAP_CHANCE: Array = [0.0, 0.015, 0.03, 0.045, 0.065]
+const LEVEL_MOVING_CHANCE: Array = [0.02, 0.03, 0.045, 0.06, 0.08]
+const LEVEL_COLLAPSING_CHANCE: Array = [0.015, 0.025, 0.035, 0.05, 0.07]
+const LEVEL_TRAP_CHANCE: Array = [0.0, 0.0075, 0.015, 0.0225, 0.0325]
 
 # Platform colors are fixed per TYPE (not per zone) so players can recognize
 # hazards at a glance: green=normal, blue=moving, yellow=collapsing,
@@ -136,7 +141,7 @@ const STORM_WIND_INTENSITY_MULT: float = 2.4
 # platform generation itself (width, gap, spacing, layout) is now shared.
 const DIFFICULTY_TRAP_MULT: Dictionary = {"EASY": 0.3, "MEDIUM": 1.0, "HARD": 1.6}
 const DIFFICULTY_EAGLE_CHANCE_MULT: Dictionary = {"EASY": 0.3, "MEDIUM": 1.0, "HARD": 1.6}
-const EAGLE_BASE_CHANCE: float = 0.25
+const EAGLE_BASE_CHANCE: float = 0.125
 
 # Platforms are no longer one fixed size — width is picked per spawn from 4
 # categories (same weighted mix for every difficulty now) so consecutive
@@ -144,12 +149,18 @@ const EAGLE_BASE_CHANCE: float = 0.25
 # the width the platform scenes are authored at (Polygon2D -80..80,
 # CollisionShape2D 160 wide).
 const BASE_PLATFORM_WIDTH: float = 160.0
+# Final Balance Hotfix: 120px is the practical minimum — anything narrower
+# read as a "tiny isolated platform" that hurt playability rather than
+# adding variety. Every category's floor was raised to keep the whole range
+# at or above that, and "short" (still the narrowest, hardest-to-spot tier)
+# has its selection frequency cut in half, redistributed proportionally to
+# the other three.
 const WIDTH_CATEGORY_RANGES: Dictionary = {
-	"short": Vector2(60.0, 100.0), "medium": Vector2(100.0, 180.0),
-	"long": Vector2(180.0, 300.0), "xlong": Vector2(300.0, 450.0),
+	"short": Vector2(120.0, 160.0), "medium": Vector2(160.0, 220.0),
+	"long": Vector2(220.0, 320.0), "xlong": Vector2(320.0, 450.0),
 }
 const PLATFORM_WIDTH_WEIGHTS: Dictionary = {
-	"short": 0.25, "medium": 0.3, "long": 0.3, "xlong": 0.15,
+	"short": 0.125, "medium": 0.35, "long": 0.35, "xlong": 0.175,
 }
 
 # Full baseline horizontal shift budget (VIEWPORT_WIDTH - 2*EDGE_MARGIN),
