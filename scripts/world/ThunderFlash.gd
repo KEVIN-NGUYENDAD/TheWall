@@ -4,6 +4,6 @@ extends CanvasLayer
 
 
 func flash() -> void:
-	rect.modulate.a = 0.55
+	rect.modulate.a = 0.75
 	var tween: Tween = create_tween()
 	tween.tween_property(rect, "modulate:a", 0.0, 0.5)

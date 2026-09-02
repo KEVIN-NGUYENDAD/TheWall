@@ -17,10 +17,12 @@ func _ready() -> void:
 func show_level_up(level: int, _at_jump_cap: bool = false) -> void:
 	level_label.text = "LEVEL %d" % level
 	level_label.modulate.a = 0.0
+	level_label.scale = Vector2(0.75, 0.75)
 	visible = true
 
 	var tween: Tween = create_tween()
 	tween.tween_property(level_label, "modulate:a", 1.0, FADE_IN_TIME)
+	tween.parallel().tween_property(level_label, "scale", Vector2(1.0, 1.0), FADE_IN_TIME * 2.0).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	tween.tween_interval(HOLD_TIME)
 	tween.tween_property(level_label, "modulate:a", 0.0, FADE_OUT_TIME)
 	tween.tween_callback(func(): visible = false)

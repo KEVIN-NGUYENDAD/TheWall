@@ -25,7 +25,7 @@ script = ExtResource("1")
 [node name="ParallaxBackground" type="ParallaxBackground" parent="."]
 
 [node name="CloudsFar" type="ParallaxLayer" parent="ParallaxBackground"]
-motion_scale = Vector2(0.08, 0.08)
+motion_scale = Vector2(0.04, 0.04)
 motion_mirroring = Vector2(0, 960)
 
 [node name="CloudFarA" type="Polygon2D" parent="ParallaxBackground/CloudsFar"]
@@ -121,7 +121,7 @@ polygon = PackedVector2Array(380, 300, 420, 282, 465, 296, 480, 314, 445, 328, 3
 [node name="SparkleField" parent="ParallaxBackground/Near" instance=ExtResource("10")]
 
 [node name="FogLayer" type="ParallaxLayer" parent="ParallaxBackground"]
-motion_scale = Vector2(0.9, 0.9)
+motion_scale = Vector2(0.97, 0.97)
 motion_mirroring = Vector2(0, 960)
 script = ExtResource("16")
 

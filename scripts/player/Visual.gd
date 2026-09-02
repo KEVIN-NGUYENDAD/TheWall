@@ -12,17 +12,17 @@ func _draw() -> void:
 	# Rim-light on the upper-left to fake a rounded, 3D surface.
 	draw_arc(Vector2.ZERO, radius - 6.0, deg_to_rad(195), deg_to_rad(305), 16, Color(1.0, 1.0, 1.0, 0.4), radius * 0.42, true)
 	# Dark outline so the player reads clearly against any sky/season color.
-	draw_arc(Vector2.ZERO, radius - 2.0, 0.0, TAU, 32, Color(0.0, 0.0, 0.0, 1.0), 5.5, true)
+	draw_arc(Vector2.ZERO, radius - 2.0, 0.0, TAU, 32, Color(0.0, 0.0, 0.0, 1.0), 6.5, true)
 	if is_charging:
 		draw_arc(Vector2.ZERO, radius + 6.0, 0.0, TAU * charge_ratio, 32, Color(1.0, 0.3, 0.3), 4.0, true)
 
 
 func _draw_shadow() -> void:
 	var points: PackedVector2Array = PackedVector2Array()
-	var rx: float = radius * 0.9
-	var ry: float = radius * 0.32
+	var rx: float = radius * 0.95
+	var ry: float = radius * 0.36
 	var cy: float = radius * 0.92
 	for i in range(16):
 		var a: float = i * TAU / 16.0
 		points.append(Vector2(cos(a) * rx, cy + sin(a) * ry))
-	draw_colored_polygon(points, Color(0.0, 0.0, 0.0, 0.28))
+	draw_colored_polygon(points, Color(0.0, 0.0, 0.0, 0.4))

@@ -32,18 +32,24 @@ const LEVEL_UP_RING_SCENE: PackedScene = preload("res://scenes/effects/LevelUpRi
 
 const VIEWPORT_WIDTH: float = 540.0
 const EDGE_MARGIN: float = 90.0
-# Bug Fix Pass: gaps widened 35% (within the requested 30-50% range) to
-# restore a sense of progression/challenge that recent Easy-focused passes
-# had flattened out — this is the shared baseline all difficulty
-# multipliers scale from, so Easy/Medium/Hard all get proportionally more
-# spread out, not just one tier.
-const MIN_GAP: float = 121.5
-const MAX_GAP: float = 297.0
+# Final Gameplay+Visual Pass: gaps are now defined directly per difficulty
+# (not a shared base * multiplier) so each tier can be pushed hard without
+# one tier's increase distorting another's. The requested +50-300% figures
+# would push Medium/Hard's vertical gap past what a single jump can ever
+# cross (max rise is ~432px, see PHYSICS_* below) — reachability is called
+# out in the same request as non-negotiable, so these ranges are the
+# largest that stay under that ceiling with real margin, not the literal
+# percentages. See MAX_SAFE_VERTICAL_GAP.
+const DIFFICULTY_GAP_RANGE: Dictionary = {
+	"EASY": Vector2(90.0, 180.0), "MEDIUM": Vector2(150.0, 260.0), "HARD": Vector2(220.0, 355.0),
+}
+const MAX_SAFE_VERTICAL_GAP: float = 360.0
 const FALL_DEATH_MARGIN: float = 200.0
 const CAMERA_TOP_MARGIN: float = 500.0
 const CHECKPOINT_INTERVAL_M: int = 100
-# Coin density cut 30% (0.45 -> 0.315).
-const COIN_CHANCE: float = 0.315
+# Coin density cut further (0.315 -> 0.22) — fewer coins, but each is more
+# visually prominent now (see Coin.gd glow/sparkle bump).
+const COIN_CHANCE: float = 0.22
 const SPIKE_CHANCE: float = 0.1
 const NEAR_MISS_METERS: float = 5.0
 const EAGLE_MIN_HEIGHT_M: float = 100.0
@@ -99,21 +105,37 @@ const SEASON_TINT_COLOR: Array = [
 	Color(0.75, 0.88, 1.0, 0.45), Color(0.35, 0.4, 0.5, 0.4),
 	Color(1.0, 0.85, 0.92, 0.16), Color(1.0, 0.95, 0.55, 0.16), Color(1.0, 0.5, 0.15, 0.3),
 ]
-# Winter snow pushed denser again (0.18 -> 0.12); Storm rain unchanged.
+# Final Pass: Winter snow pushed denser again (0.12 -> 0.07); Storm rain
+# pushed denser too (0.15 -> 0.08) for a real storm feel.
 const WEATHER_INTERVAL: Dictionary = {
-	0: 0.12, 1: 0.15, 2: 4.8, 3: 0.0, 4: 1.0,
+	0: 0.07, 1: 0.08, 2: 4.8, 3: 0.0, 4: 1.0,
 }
-const THUNDER_INTERVAL_MIN: float = 5.0
-const THUNDER_INTERVAL_MAX: float = 11.0
+const THUNDER_INTERVAL_MIN: float = 4.0
+const THUNDER_INTERVAL_MAX: float = 8.5
 const FLOWER_CHANCE: float = 0.2
-# Bug Fix Pass: Winter platforms should look obviously snow-capped, not
-# occasionally — raised from 0.2 to 0.85 (Spring's flower chance unchanged).
-const SNOW_PATCH_CHANCE: float = 0.85
+# Winter platforms should look obviously snow-capped, essentially always.
+const SNOW_PATCH_CHANCE: float = 0.95
 # Fog thickens with altitude; Winter also gets a flat mist boost regardless
-# of height for its own "sương trắng" identity — boosted further this pass
-# (0.35 -> 0.45) for more obviously cold, misty air.
+# of height for its own "sương trắng" identity. A small baseline floor keeps
+# some atmospheric depth visible at all times/seasons (2.5D pass).
 const FOG_HEIGHT_CAP_M: float = 900.0
-const FOG_WINTER_BOOST: float = 0.45
+const FOG_WINTER_BOOST: float = 0.55
+const FOG_BASELINE_MIN: float = 0.15
+
+# Final Pass: mountains/hills/far-clouds get a season-specific tint during
+# Winter and Storm specifically (on top of the Zone system that otherwise
+# owns them) so the background itself reads as cold/snowy or dark/stormy —
+# without this, the background stayed Zone-green/-blue regardless of season
+# since Zone bands don't line up with Season bands. Any other season
+# restores the normal Zone-driven color.
+const WINTER_MOUNTAIN_COLOR: Color = Color(0.86, 0.9, 0.95, 1)
+const WINTER_HILL_COLOR: Color = Color(0.9, 0.94, 0.98, 1)
+const WINTER_CLOUD_FAR_COLOR: Color = Color(0.85, 0.92, 1.0, 1)
+const STORM_MOUNTAIN_COLOR: Color = Color(0.32, 0.35, 0.42, 1)
+const STORM_HILL_COLOR: Color = Color(0.38, 0.4, 0.48, 1)
+const STORM_CLOUD_FAR_COLOR: Color = Color(0.4, 0.42, 0.48, 1)
+const NEUTRAL_CLOUD_FAR_COLOR: Color = Color(1, 1, 1, 1)
+const STORM_WIND_INTENSITY_MULT: float = 2.4
 
 # Difficulty modes: multipliers applied on top of the base level curve.
 # Balance Rework: rebuilt from scratch against Medium as the balanced 1.0
@@ -124,13 +146,26 @@ const FOG_WINTER_BOOST: float = 0.45
 # farther gaps, narrower platforms.
 const DIFFICULTY_TRAP_MULT: Dictionary = {"EASY": 0.3, "MEDIUM": 1.0, "HARD": 1.6}
 const DIFFICULTY_HAZARD_MULT: Dictionary = {"EASY": 0.4, "MEDIUM": 1.0, "HARD": 1.5}
-# Easy Mode Rebalance: vertical gap cut a further 30% on top of its existing
-# 0.6 (0.6 * 0.7 = 0.42) — Medium/Hard untouched.
-const DIFFICULTY_GAP_MULT: Dictionary = {"EASY": 0.42, "MEDIUM": 0.85, "HARD": 1.2}
 const DIFFICULTY_BIRD_INTERVAL_MULT: Dictionary = {"EASY": 0.6, "MEDIUM": 1.0, "HARD": 1.6}
 const DIFFICULTY_EAGLE_CHANCE_MULT: Dictionary = {"EASY": 0.3, "MEDIUM": 1.0, "HARD": 1.6}
-const DIFFICULTY_PLATFORM_SCALE: Dictionary = {"EASY": 1.3, "MEDIUM": 1.0, "HARD": 0.75}
 const EAGLE_BASE_CHANCE: float = 0.25
+
+# Final Pass: platforms are no longer one fixed size — width is picked per
+# spawn from 4 categories, distributed differently per difficulty (Easy
+# skews long/generous, Hard skews short/narrow) so consecutive platforms
+# never look like a uniform staircase and each difficulty is visibly
+# distinct at a glance. BASE_PLATFORM_WIDTH matches the width the platform
+# scenes are authored at (Polygon2D -80..80, CollisionShape2D 160 wide).
+const BASE_PLATFORM_WIDTH: float = 160.0
+const WIDTH_CATEGORY_RANGES: Dictionary = {
+	"short": Vector2(60.0, 100.0), "medium": Vector2(100.0, 180.0),
+	"long": Vector2(180.0, 300.0), "xlong": Vector2(300.0, 450.0),
+}
+const DIFFICULTY_WIDTH_WEIGHTS: Dictionary = {
+	"EASY": {"short": 0.05, "medium": 0.2, "long": 0.4, "xlong": 0.35},
+	"MEDIUM": {"short": 0.25, "medium": 0.3, "long": 0.3, "xlong": 0.15},
+	"HARD": {"short": 0.45, "medium": 0.3, "long": 0.2, "xlong": 0.05},
+}
 
 # Easy Mode Rebalance: horizontal reach between consecutive platforms is
 # constrained (Medium/Hard keep the old fully-free full-width placement —
@@ -155,10 +190,6 @@ const PHYSICS_MAX_JUMP_SPEED: float = 1100.0
 const PHYSICS_MOVE_SPEED: float = 220.0
 const PHYSICS_AIR_ACCEL: float = 900.0
 const REACHABILITY_SAFETY_MARGIN: float = 0.85
-# Bug Fix Pass: platform density pulled back down from 1.5x — with gaps now
-# 35% wider (see MIN_GAP/MAX_GAP above), the old 1.5x over-compensation for
-# Easy's tight beginner-zone gaps is no longer needed and was making Easy
-# feel densely packed/cluttered rather than a real climb.
 const DIFFICULTY_PLATFORM_COUNT_MULT: Dictionary = {"EASY": 1.15, "MEDIUM": 1.0, "HARD": 1.0}
 const DIFFICULTY_FAKE_MULT: Dictionary = {"EASY": 0.2, "MEDIUM": 1.0, "HARD": 1.0}
 
@@ -256,6 +287,7 @@ const CLOUD_DRIFT_RANGE: float = 620.0
 @onready var season_banner = $SeasonBanner
 @onready var thunder_flash = $ThunderFlash
 @onready var fog_layer = $ParallaxBackground/FogLayer
+@onready var clouds_far: Array = [$ParallaxBackground/CloudsFar/CloudFarA, $ParallaxBackground/CloudsFar/CloudFarB, $ParallaxBackground/CloudsFar/CloudFarC]
 @onready var season_tint = $SeasonTint
 @onready var upgrade_screen = $UpgradeScreen
 @onready var rest_area_screen = $RestAreaScreen
@@ -386,10 +418,14 @@ func _generate_platforms() -> float:
 
 		if i < platform_count - 1:
 			var beginner: bool = difficulty == "EASY" and height < BEGINNER_ZONE_HEIGHT_M
-			var gap_mult: float = DIFFICULTY_GAP_MULT.get(difficulty, 1.0)
+			var gap_range: Vector2 = DIFFICULTY_GAP_RANGE.get(difficulty, Vector2(150.0, 260.0))
+			var gap_px: float = randf_range(gap_range.x, gap_range.y)
 			if beginner:
-				gap_mult *= BEGINNER_VERTICAL_MULT
-			var gap_px: float = randf_range(MIN_GAP, MAX_GAP) * gap_mult
+				gap_px *= BEGINNER_VERTICAL_MULT
+			# Hard ceiling regardless of difficulty — a single jump can only
+			# ever rise so far (see _max_reachable_horizontal), so no gap is
+			# ever allowed past that no matter what the range above rolls.
+			gap_px = min(gap_px, MAX_SAFE_VERTICAL_GAP)
 			y -= gap_px
 
 			# Never place a platform combination that's physically impossible
@@ -424,6 +460,27 @@ func _max_reachable_horizontal(vertical_gap: float) -> float:
 	var t_total: float = t_up + t_fall
 	var ramp_loss: float = (PHYSICS_MOVE_SPEED * PHYSICS_MOVE_SPEED) / (2.0 * PHYSICS_AIR_ACCEL)
 	return max(PHYSICS_MOVE_SPEED * t_total - ramp_loss, 0.0)
+
+
+# Picks a random platform width in pixels from one of the 4 categories
+# (short/medium/long/xlong), weighted per difficulty so Easy skews toward
+# long generous platforms and Hard skews toward short narrow ones — the
+# resulting mix of very different lengths side by side is what breaks the
+# "uniform staircase" look, not just wider gaps alone.
+func _pick_platform_width(diff: String) -> float:
+	var weights: Dictionary = DIFFICULTY_WIDTH_WEIGHTS.get(diff, DIFFICULTY_WIDTH_WEIGHTS["MEDIUM"])
+	var total: float = 0.0
+	for w in weights.values():
+		total += w
+	var roll: float = randf() * total
+	var cumulative: float = 0.0
+	for category in weights:
+		cumulative += weights[category]
+		if roll < cumulative:
+			var range: Vector2 = WIDTH_CATEGORY_RANGES[category]
+			return randf_range(range.x, range.y)
+	var fallback_range: Vector2 = WIDTH_CATEGORY_RANGES["medium"]
+	return randf_range(fallback_range.x, fallback_range.y)
 
 
 func _get_level_index(height: float) -> int:
@@ -467,7 +524,7 @@ func _spawn_platform_variant(i: int, x: float, y: float, height: float) -> Dicti
 	var platform: Node = scene.instantiate()
 	platform.position = Vector2(x, y)
 	if i > 0:
-		platform.scale.x *= DIFFICULTY_PLATFORM_SCALE.get(difficulty, 1.0)
+		platform.scale.x *= _pick_platform_width(difficulty) / BASE_PLATFORM_WIDTH
 	add_child(platform)
 	platform.modulate = SEASON_PLATFORM_MODULATE[_get_level_index(height)]
 
@@ -603,6 +660,35 @@ func _check_season_transition(height: float) -> void:
 	sky_tween.tween_method(_set_sky_color, current_sky_color, SEASON_SKY_COLOR[level_idx], ZONE_TRANSITION_TIME)
 	current_sky_color = SEASON_SKY_COLOR[level_idx]
 
+	# Winter/Storm additionally override the mountains/hills/far-clouds that
+	# Zone otherwise owns, so the background itself reads as snowy/cold or
+	# dark/stormy — without this the background stayed Zone-green regardless
+	# of season, since Zone bands don't line up with Season bands. Any other
+	# season restores the normal Zone-driven color for the current zone.
+	var bg_tween: Tween = create_tween()
+	bg_tween.set_parallel(true)
+	var mountain_color: Color = ZONE_MOUNTAIN_COLORS[current_zone]
+	var hill_color: Color = ZONE_HILL_COLORS[current_zone]
+	var cloud_far_color: Color = NEUTRAL_CLOUD_FAR_COLOR
+	if level_idx == 0:
+		mountain_color = WINTER_MOUNTAIN_COLOR
+		hill_color = WINTER_HILL_COLOR
+		cloud_far_color = WINTER_CLOUD_FAR_COLOR
+	elif level_idx == STORM_LEVEL_IDX:
+		mountain_color = STORM_MOUNTAIN_COLOR
+		hill_color = STORM_HILL_COLOR
+		cloud_far_color = STORM_CLOUD_FAR_COLOR
+	for m in mountains:
+		bg_tween.tween_property(m, "color", mountain_color, ZONE_TRANSITION_TIME)
+	for h in hills:
+		bg_tween.tween_property(h, "color", hill_color, ZONE_TRANSITION_TIME)
+	for c in clouds_far:
+		bg_tween.tween_property(c, "color", cloud_far_color, ZONE_TRANSITION_TIME)
+
+	# Storm gets an obviously windier WindLayer on top of denser rain/darker
+	# clouds/brighter lightning above.
+	wind_layer.intensity_mult = STORM_WIND_INTENSITY_MULT if level_idx == STORM_LEVEL_IDX else 1.0
+
 	var interval: float = WEATHER_INTERVAL.get(level_idx, 0.0)
 	if interval > 0.0:
 		_restart_timer(weather_timer, interval, interval * 1.6)
@@ -645,6 +731,9 @@ func _update_fog(height: float) -> void:
 	var value: float = clamp(height / FOG_HEIGHT_CAP_M, 0.0, 1.0)
 	if current_level_idx == 0:
 		value = clamp(value + FOG_WINTER_BOOST, 0.0, 1.0)
+	# Small always-on floor so the fog parallax layer contributes some
+	# constant depth cueing regardless of height/season (2.5D pass).
+	value = max(value, FOG_BASELINE_MIN)
 	fog_layer.set_intensity(value)
 
 

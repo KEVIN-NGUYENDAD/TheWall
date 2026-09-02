@@ -48,9 +48,10 @@ func _on_body_entered(body: Node) -> void:
 
 func _draw() -> void:
 	var pulse: float = 0.6 + 0.4 * sin(_t * 4.0)
-	# Layered glow: a big soft outer wash plus a tighter, brighter inner core.
-	draw_circle(Vector2.ZERO, RADIUS * 4.6 * pulse, Color(GLOW_COLOR.r, GLOW_COLOR.g, GLOW_COLOR.b, GLOW_COLOR.a * pulse * 0.35), true, -1.0, true)
-	draw_circle(Vector2.ZERO, RADIUS * 2.6 * pulse, Color(GLOW_COLOR.r, GLOW_COLOR.g, GLOW_COLOR.b, GLOW_COLOR.a * pulse * 0.7), true, -1.0, true)
+	# Coins are rarer now — layered glow pushed further so each one still
+	# reads as an obvious, valuable pickup from a distance.
+	draw_circle(Vector2.ZERO, RADIUS * 5.4 * pulse, Color(GLOW_COLOR.r, GLOW_COLOR.g, GLOW_COLOR.b, GLOW_COLOR.a * pulse * 0.32), true, -1.0, true)
+	draw_circle(Vector2.ZERO, RADIUS * 3.2 * pulse, Color(GLOW_COLOR.r, GLOW_COLOR.g, GLOW_COLOR.b, GLOW_COLOR.a * pulse * 0.75), true, -1.0, true)
 
 	# faceted gem silhouette: pointed top, wide middle, pointed bottom
 	var top: Vector2 = Vector2(0, -RADIUS * 1.3)
