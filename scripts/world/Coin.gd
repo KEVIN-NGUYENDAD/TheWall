@@ -3,10 +3,10 @@ extends Area2D
 signal collected
 
 const RADIUS: float = 12.0
-const GEM_COLOR: Color = Color(1.0, 0.9, 0.05, 1.0)
-const GEM_DARK: Color = Color(0.8, 0.6, 0.0, 1.0)
-const FACET_COLOR: Color = Color(1.0, 0.98, 0.8, 0.95)
-const GLOW_COLOR: Color = Color(1.0, 0.88, 0.2, 0.75)
+const GEM_COLOR: Color = Color(1.0, 0.95, 0.0, 1.0)
+const GEM_DARK: Color = Color(0.85, 0.65, 0.0, 1.0)
+const FACET_COLOR: Color = Color(1.0, 1.0, 0.85, 1.0)
+const GLOW_COLOR: Color = Color(1.0, 0.9, 0.15, 0.85)
 const SPARKLE_COLOR: Color = Color(1.0, 1.0, 0.95, 1.0)
 
 var is_collected: bool = false
@@ -33,7 +33,7 @@ func _on_body_entered(body: Node) -> void:
 
 func _draw() -> void:
 	var pulse: float = 0.6 + 0.4 * sin(_t * 4.0)
-	draw_circle(Vector2.ZERO, RADIUS * 2.6 * pulse, Color(GLOW_COLOR.r, GLOW_COLOR.g, GLOW_COLOR.b, GLOW_COLOR.a * pulse), true, -1.0, true)
+	draw_circle(Vector2.ZERO, RADIUS * 3.2 * pulse, Color(GLOW_COLOR.r, GLOW_COLOR.g, GLOW_COLOR.b, GLOW_COLOR.a * pulse), true, -1.0, true)
 
 	# faceted gem silhouette: pointed top, wide middle, pointed bottom
 	var top: Vector2 = Vector2(0, -RADIUS * 1.3)
@@ -59,9 +59,9 @@ func _draw() -> void:
 			var s_alpha: float = 1.0 - (sparkle_phase / 1.2)
 			var s_angle: float = i * 2.4
 			var s_pos: Vector2 = Vector2(cos(s_angle), sin(s_angle)) * RADIUS * 1.7
-			_draw_sparkle(s_pos, 4.0 * s_alpha, Color(SPARKLE_COLOR.r, SPARKLE_COLOR.g, SPARKLE_COLOR.b, s_alpha))
+			_draw_sparkle(s_pos, 6.5 * s_alpha, Color(SPARKLE_COLOR.r, SPARKLE_COLOR.g, SPARKLE_COLOR.b, s_alpha))
 
 
 func _draw_sparkle(pos: Vector2, size: float, color: Color) -> void:
-	draw_line(pos + Vector2(-size, 0), pos + Vector2(size, 0), color, 1.5, true)
-	draw_line(pos + Vector2(0, -size), pos + Vector2(0, size), color, 1.5, true)
+	draw_line(pos + Vector2(-size, 0), pos + Vector2(size, 0), color, 2.0, true)
+	draw_line(pos + Vector2(0, -size), pos + Vector2(0, size), color, 2.0, true)

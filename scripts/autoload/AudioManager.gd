@@ -1,6 +1,7 @@
 extends Node
 
-# Plays one-shot SFX from real audio files under res://audio/sfx/.
+# Plays one-shot SFX from real audio files (mostly under res://audio/sfx/,
+# except bird_chirp.mp3 and eagle.mp3 which live directly under res://audio/).
 # No procedural synthesis — if a file for a given name doesn't exist yet,
 # play() silently does nothing. See audio/README.md for the expected manifest.
 
@@ -15,12 +16,21 @@ const SFX_VOLUME_DB: Dictionary = {
 	"dash": 4.0,
 	"checkpoint": 6.0,
 	"memory": 5.0,
-	"white_bird": 4.0,
-	"chirp": 4.0,
 	"near_miss": 5.0,
 	"eagle": 3.0,
 }
+# Bird chirp intentionally has no hype boost — it should sit quieter/gentler
+# than the boosted rewards above, not compete with them.
+const BIRD_CHIRP_VOLUME_DB: float = -6.0
 const HYPE_PITCH_VARIANCE: float = 0.14
+
+# Bird chirp fires on every reward-bird pickup, which can happen in quick
+# succession (e.g. a nest spawning two at once) — cooldown stops it from
+# overlapping into a spammy flutter of the same sound.
+const SFX_COOLDOWN_SEC: Dictionary = {
+	"white_bird": 0.35,
+	"chirp": 0.35,
+}
 
 const SFX_PATHS: Dictionary = {
 	"jump": "res://audio/sfx/jump.ogg",
@@ -31,17 +41,18 @@ const SFX_PATHS: Dictionary = {
 	"landing": "res://audio/sfx/landing.ogg",
 	"memory": "res://audio/sfx/memory.ogg",
 	"near_miss": "res://audio/sfx/nearmiss.ogg",
-	"white_bird": "res://audio/sfx/bird_chirp.ogg",
-	"chirp": "res://audio/sfx/bird_chirp.ogg",
+	"white_bird": "res://audio/bird_chirp.mp3",
+	"chirp": "res://audio/bird_chirp.mp3",
 	"area_discovery": "res://audio/sfx/area_discovery.ogg",
 	"click": "res://audio/sfx/click.ogg",
 	"unlock": "res://audio/sfx/unlock.ogg",
-	"eagle": "res://audio/sfx/eagle.ogg",
+	"eagle": "res://audio/eagle.mp3",
 }
 
 var _cache: Dictionary = {}
 var _voices: Array = []
 var _next_voice: int = 0
+var _last_played_ms: Dictionary = {}
 
 
 func _ready() -> void:
@@ -66,10 +77,22 @@ func _ready() -> void:
 func play(sfx_name: String) -> void:
 	if not _cache.has(sfx_name):
 		return
+
+	var cooldown: float = SFX_COOLDOWN_SEC.get(sfx_name, 0.0)
+	if cooldown > 0.0:
+		var now_ms: int = Time.get_ticks_msec()
+		var last_ms: int = _last_played_ms.get(sfx_name, -1000000)
+		if now_ms - last_ms < int(cooldown * 1000.0):
+			return
+		_last_played_ms[sfx_name] = now_ms
+
 	var voice: AudioStreamPlayer = _voices[_next_voice]
 	_next_voice = (_next_voice + 1) % VOICE_COUNT
 	voice.stream = _cache[sfx_name]
-	voice.volume_db = SFX_VOLUME_DB.get(sfx_name, 0.0)
+	if sfx_name == "white_bird" or sfx_name == "chirp":
+		voice.volume_db = BIRD_CHIRP_VOLUME_DB
+	else:
+		voice.volume_db = SFX_VOLUME_DB.get(sfx_name, 0.0)
 	var variance: float = HYPE_PITCH_VARIANCE if SFX_VOLUME_DB.has(sfx_name) else PITCH_VARIANCE
 	voice.pitch_scale = 1.0 + randf_range(-variance, variance)
 	voice.play()

@@ -37,9 +37,11 @@ dedicated player, independent of season crossfading, starting on `MainMenu`
 and stopping automatically when gameplay starts. `MusicManager` handles
 looping automatically for `.ogg`/`.mp3`/`.wav`.
 
-Overall music volume was turned down to roughly 40% of its earlier level per
-player feedback (`SEASON_VOLUME_DB`/`MENU_VOLUME_DB` -3dB → -11dB) — it was
-overpowering other feedback (checkpoints, coins, eagle warnings).
+Music volume has been cut twice now on player feedback that it still
+dominated other gameplay feedback (checkpoints, coins, eagle warnings) —
+`SEASON_VOLUME_DB`/`MENU_VOLUME_DB` went -3dB → -11dB → -20.5dB → -30dB
+(each cut roughly another 1/3 of the previous linear loudness). SFX
+volumes in `AudioManager` are deliberately untouched by any of these cuts.
 
 ## SFX (`audio/sfx/`) — one-shot
 
@@ -53,11 +55,19 @@ overpowering other feedback (checkpoints, coins, eagle warnings).
 | `landing.ogg` | Hard landing |
 | `memory.ogg` | Memory reveal (100m/300m/700m/1500m) |
 | `nearmiss.ogg` | Dying within 5m of a checkpoint |
-| `bird_chirp.ogg` | Collecting the rare white bird, discovering a bird nest, and collecting a common bird (all three share this file) — real chirp/tweet, never synthesized |
-| `eagle.ogg` | Eagle telegraph/strike (steals 3 coins, no death) — real eagle screech, never synthesized |
 | `area_discovery.ogg` | Crossing into a new zone |
 | `click.ogg` | UI button press |
 | `unlock.ogg` | Achievement unlock (dormant system, kept for completeness) |
+
+## Bird & Eagle (`audio/`, not `audio/sfx/`) — real files in use
+
+| File | Used for |
+|---|---|
+| `bird_chirp.mp3` | Collecting the rare white bird, discovering a bird nest, and collecting a common bird (all three share this file). **This file is real** — sourced from a real recording, not synthesized. Deliberately quieter than the "hype"-boosted SFX above (`BIRD_CHIRP_VOLUME_DB` in `AudioManager.gd`) and has a 0.35s cooldown per key so back-to-back bird pickups (e.g. a nest spawning two at once) can't overlap into a spammy flutter. |
+| `eagle.mp3` | Eagle telegraph (plays the moment it appears) and eagle strike (plays again on hit) — not yet supplied; silently no-ops with a startup debug warning until it exists at this exact path. |
+
+These two live directly under `audio/`, not `audio/sfx/` — that's deliberate,
+matching the paths `AudioManager.gd`'s `SFX_PATHS` dictionary references.
 
 ## Format notes
 

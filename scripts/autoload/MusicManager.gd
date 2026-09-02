@@ -8,11 +8,10 @@ extends Node
 # See audio/README.md for the current track mapping.
 
 const CROSSFADE_TIME: float = 4.0
-# Immersion pass: music was still dominating gameplay feedback (checkpoints,
-# coins, eagle warnings). Cut again to ~1/3 of the previous level — SFX
+# Hotfix pass: still too loud. Cut to ~1/3 of the previous level again — SFX
 # volumes in AudioManager are untouched.
-# (-11dB -> -20.5dB is roughly a further 1/3 linear-loudness reduction.)
-const SEASON_VOLUME_DB: float = -20.5
+# (-20.5dB -> -30.0dB is roughly a further 1/3 linear-loudness reduction.)
+const SEASON_VOLUME_DB: float = -30.0
 const SILENT_DB: float = -80.0
 
 # Only 3 real tracks exist; adjacent seasons share one so the whole climb
@@ -25,7 +24,7 @@ const SEASON_TRACK_PATHS: Array = [
 	"res://audio/music/the_mountain-fantasy-quest-184140.mp3", # Storm
 ]
 const MENU_TRACK_PATH: String = "res://audio/music/velariomusic-happy-vibes-591803.mp3"
-const MENU_VOLUME_DB: float = -20.5
+const MENU_VOLUME_DB: float = -30.0
 
 var _season_streams: Array = []
 var _player_a: AudioStreamPlayer

@@ -76,15 +76,15 @@ const THUNDER_INTERVAL_MAX: float = 14.0
 const FLOWER_CHANCE: float = 0.2
 
 # Difficulty modes: multipliers applied on top of the base level curve.
-# Immersion pass: shifted every tier down again per feedback — the old
-# Medium multipliers (1.0x) now define Hard, the old Easy multipliers
-# (0.5x) now define Medium, and a brand new, gentler Easy (0.25x, smaller
-# gaps for more forgiving jumps) sits below that.
-const DIFFICULTY_TRAP_MULT: Dictionary = {"EASY": 0.25, "MEDIUM": 0.5, "HARD": 1.0}
-const DIFFICULTY_HAZARD_MULT: Dictionary = {"EASY": 0.25, "MEDIUM": 0.5, "HARD": 1.0}
-const DIFFICULTY_GAP_MULT: Dictionary = {"EASY": 0.65, "MEDIUM": 0.8, "HARD": 1.0}
+# Hotfix pass: Medium/Hard stay put (Medium == previous Easy, Hard ==
+# previous Medium, per the standing instruction that those two are already
+# right) — only Easy was cut another 50% (traps/eagles/gaps) for even
+# safer jumps and more recovery room.
+const DIFFICULTY_TRAP_MULT: Dictionary = {"EASY": 0.125, "MEDIUM": 0.5, "HARD": 1.0}
+const DIFFICULTY_HAZARD_MULT: Dictionary = {"EASY": 0.125, "MEDIUM": 0.5, "HARD": 1.0}
+const DIFFICULTY_GAP_MULT: Dictionary = {"EASY": 0.55, "MEDIUM": 0.8, "HARD": 1.0}
 const DIFFICULTY_BIRD_INTERVAL_MULT: Dictionary = {"EASY": 0.6, "MEDIUM": 1.0, "HARD": 1.6}
-const DIFFICULTY_EAGLE_CHANCE_MULT: Dictionary = {"EASY": 0.25, "MEDIUM": 0.5, "HARD": 1.0}
+const DIFFICULTY_EAGLE_CHANCE_MULT: Dictionary = {"EASY": 0.125, "MEDIUM": 0.5, "HARD": 1.0}
 const EAGLE_BASE_CHANCE: float = 0.25
 
 # Coin-reward power-ups (Shop).

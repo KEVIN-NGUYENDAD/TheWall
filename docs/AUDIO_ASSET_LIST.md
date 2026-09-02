@@ -30,8 +30,14 @@ progress. The menu track plays independently on its own player.
 | `checkpoint.ogg` | Checkpoint activation |
 | `death.ogg` | Falling / dying |
 | `memory.ogg` | Memory reveal (100m/300m/700m/1500m) |
-| `bird_chirp.ogg` | Bird encounter (rare white bird pickup and nest discovery) |
 | `nearmiss.ogg` | Dying within 5m of a checkpoint |
+
+## Bird & Eagle — `res://audio/` (not `sfx/`)
+
+| File | Used for |
+|---|---|
+| `bird_chirp.mp3` | Bird encounter (rare white bird pickup, nest discovery, common bird pickup) — **in place**, a real recording |
+| `eagle.mp3` | Eagle telegraph (on appearance) and strike (on hit) — not yet supplied |
 
 ## Format
 
