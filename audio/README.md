@@ -37,6 +37,10 @@ dedicated player, independent of season crossfading, starting on `MainMenu`
 and stopping automatically when gameplay starts. `MusicManager` handles
 looping automatically for `.ogg`/`.mp3`/`.wav`.
 
+Overall music volume was turned down to roughly 40% of its earlier level per
+player feedback (`SEASON_VOLUME_DB`/`MENU_VOLUME_DB` -3dB → -11dB) — it was
+overpowering other feedback (checkpoints, coins, eagle warnings).
+
 ## SFX (`audio/sfx/`) — one-shot
 
 | File | Used for |

@@ -40,6 +40,11 @@ func _on_change_name_pressed() -> void:
 	get_tree().change_scene_to_file("res://scenes/ui/MainMenu.tscn")
 
 
+func _on_season_guide_pressed() -> void:
+	AudioManager.play("click")
+	get_tree().change_scene_to_file("res://scenes/ui/SeasonGuideScreen.tscn")
+
+
 func _on_skins_pressed() -> void:
 	AudioManager.play("click")
 	get_tree().change_scene_to_file("res://scenes/ui/SkinsScreen.tscn")

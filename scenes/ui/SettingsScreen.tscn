@@ -67,13 +67,18 @@ text = "Medium"
 custom_minimum_size = Vector2(80, 48)
 text = "Hard"
 
-[node name="SkinsButton" type="Button" parent="CenterContainer/VBoxContainer"]
+[node name="SeasonGuideButton" type="Button" parent="CenterContainer/VBoxContainer"]
 custom_minimum_size = Vector2(260, 56)
-text = "Skins"
+text = "Season Guide"
 
 [node name="StatsButton" type="Button" parent="CenterContainer/VBoxContainer"]
 custom_minimum_size = Vector2(260, 56)
 text = "Statistics"
+
+[node name="SkinsButton" type="Button" parent="CenterContainer/VBoxContainer"]
+custom_minimum_size = Vector2(260, 48)
+theme_override_font_sizes/font_size = 15
+text = "Skins (cosmetic)"
 
 [node name="QuitButton" type="Button" parent="CenterContainer/VBoxContainer"]
 custom_minimum_size = Vector2(260, 56)
@@ -87,7 +92,8 @@ text = "Back"
 [connection signal="pressed" from="CenterContainer/VBoxContainer/DifficultyRow/EasyButton" to="." method="_on_easy_pressed"]
 [connection signal="pressed" from="CenterContainer/VBoxContainer/DifficultyRow/MediumButton" to="." method="_on_medium_pressed"]
 [connection signal="pressed" from="CenterContainer/VBoxContainer/DifficultyRow/HardButton" to="." method="_on_hard_pressed"]
-[connection signal="pressed" from="CenterContainer/VBoxContainer/SkinsButton" to="." method="_on_skins_pressed"]
+[connection signal="pressed" from="CenterContainer/VBoxContainer/SeasonGuideButton" to="." method="_on_season_guide_pressed"]
 [connection signal="pressed" from="CenterContainer/VBoxContainer/StatsButton" to="." method="_on_stats_pressed"]
+[connection signal="pressed" from="CenterContainer/VBoxContainer/SkinsButton" to="." method="_on_skins_pressed"]
 [connection signal="pressed" from="CenterContainer/VBoxContainer/QuitButton" to="." method="_on_quit_pressed"]
 [connection signal="pressed" from="CenterContainer/VBoxContainer/BackButton" to="." method="_on_back_pressed"]

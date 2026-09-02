@@ -2,6 +2,7 @@ extends Control
 
 @onready var welcome_label: Label = $CenterContainer/VBoxContainer/WelcomeLabel
 @onready var continue_button: Button = $CenterContainer/VBoxContainer/ContinueButton
+@onready var continue_last_session_button: Button = $CenterContainer/VBoxContainer/ContinueLastSessionButton
 @onready var menu_box: VBoxContainer = $CenterContainer/VBoxContainer
 @onready var name_prompt: Control = $NamePrompt
 @onready var name_edit: LineEdit = $NamePrompt/Panel/VBox/NameEdit
@@ -20,6 +21,7 @@ func _ready() -> void:
 		name_edit.grab_focus()
 
 	continue_button.visible = SaveManager.data.checkpoint_height > 0.0
+	continue_last_session_button.visible = SaveManager.has_active_session()
 
 
 func _on_confirm_name_pressed() -> void:
@@ -49,6 +51,12 @@ func _on_play_pressed() -> void:
 func _on_continue_pressed() -> void:
 	AudioManager.play("click")
 	SaveManager.pending_continue = true
+	get_tree().change_scene_to_file("res://scenes/world/Main.tscn")
+
+
+func _on_continue_last_session_pressed() -> void:
+	AudioManager.play("click")
+	SaveManager.pending_auto_resume = true
 	get_tree().change_scene_to_file("res://scenes/world/Main.tscn")
 
 

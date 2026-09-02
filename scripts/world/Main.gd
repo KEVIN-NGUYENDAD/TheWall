@@ -50,10 +50,14 @@ const FAKE_PLATFORM_CHANCE: float = 0.05
 
 # Level system: Level N = N-th 300/100m-ish band, each a bit harder than the
 # last (more moving/collapsing/trap platforms). Bands match the Season bands.
+# Base rates halved overall from the previous pass per balance feedback —
+# Medium's multiplier below stays at 1.0 ("current balance" relative to this
+# new, gentler baseline), while Hard's multipliers were raised to compensate
+# so Hard stays roughly as challenging as before.
 const LEVEL_HEIGHTS: Array = [0.0, 100.0, 300.0, 600.0, 900.0]
-const LEVEL_MOVING_CHANCE: Array = [0.10, 0.14, 0.18, 0.22, 0.26]
-const LEVEL_COLLAPSING_CHANCE: Array = [0.08, 0.11, 0.15, 0.19, 0.23]
-const LEVEL_TRAP_CHANCE: Array = [0.0, 0.03, 0.05, 0.07, 0.09]
+const LEVEL_MOVING_CHANCE: Array = [0.05, 0.07, 0.09, 0.11, 0.13]
+const LEVEL_COLLAPSING_CHANCE: Array = [0.04, 0.055, 0.075, 0.095, 0.115]
+const LEVEL_TRAP_CHANCE: Array = [0.0, 0.015, 0.025, 0.035, 0.045]
 
 # Platform colors are fixed per TYPE (not per zone) so players can recognize
 # hazards at a glance: green=normal, blue=moving, yellow=collapsing,
@@ -65,18 +69,23 @@ const SEASON_PLATFORM_MODULATE: Array = [
 	Color(0.82, 0.92, 1.0), Color(0.75, 0.8, 0.88),
 ]
 const WEATHER_INTERVAL: Dictionary = {
-	0: 1.2, 1: 0.0, 2: 1.0, 3: 0.9, 4: 0.35,
+	0: 2.4, 1: 0.0, 2: 1.0, 3: 0.9, 4: 0.35,
 }
 const THUNDER_INTERVAL_MIN: float = 6.0
 const THUNDER_INTERVAL_MAX: float = 14.0
 const FLOWER_CHANCE: float = 0.2
 
 # Difficulty modes: multipliers applied on top of the base level curve.
-const DIFFICULTY_TRAP_MULT: Dictionary = {"EASY": 0.4, "MEDIUM": 1.0, "HARD": 1.8}
-const DIFFICULTY_HAZARD_MULT: Dictionary = {"EASY": 0.65, "MEDIUM": 1.0, "HARD": 1.4}
-const DIFFICULTY_GAP_MULT: Dictionary = {"EASY": 0.85, "MEDIUM": 1.0, "HARD": 1.15}
+# Easy = 50% fewer traps/eagles than Medium, smaller gaps (more safe
+# platforms follows naturally from fewer hazards). Hard's multipliers are
+# roughly double the old ones so it still lands close to the old Hard feel
+# now that the shared base rates above were halved.
+const DIFFICULTY_TRAP_MULT: Dictionary = {"EASY": 0.5, "MEDIUM": 1.0, "HARD": 3.5}
+const DIFFICULTY_HAZARD_MULT: Dictionary = {"EASY": 0.5, "MEDIUM": 1.0, "HARD": 2.8}
+const DIFFICULTY_GAP_MULT: Dictionary = {"EASY": 0.8, "MEDIUM": 1.0, "HARD": 1.15}
 const DIFFICULTY_BIRD_INTERVAL_MULT: Dictionary = {"EASY": 0.6, "MEDIUM": 1.0, "HARD": 1.6}
-const DIFFICULTY_EAGLE_CHANCE_MULT: Dictionary = {"EASY": 0.5, "MEDIUM": 1.0, "HARD": 1.6}
+const DIFFICULTY_EAGLE_CHANCE_MULT: Dictionary = {"EASY": 0.5, "MEDIUM": 1.0, "HARD": 3.0}
+const EAGLE_BASE_CHANCE: float = 0.25
 
 # Coin-reward power-ups (Shop).
 const BUFF_DURATION: float = 30.0
@@ -202,6 +211,7 @@ func _ready() -> void:
 	_apply_continue_checkpoint()
 	_spawn_recorded_death_markers()
 	_setup_ambience_timers()
+	_apply_auto_resume()
 
 	spawn_protection_timer = SPAWN_PROTECTION_TIME
 	MusicManager.start()
@@ -338,6 +348,7 @@ func _check_season_transition(height: float) -> void:
 
 	var is_first: bool = current_level_idx == -1
 	current_level_idx = level_idx
+	hud.set_season(SEASON_NAMES[level_idx])
 	_recompute_friction()
 	MusicManager.play_season(level_idx)
 
@@ -439,6 +450,31 @@ func _apply_continue_checkpoint() -> void:
 	current_checkpoint_height = target_height
 
 
+func _apply_auto_resume() -> void:
+	if not SaveManager.pending_auto_resume:
+		return
+	SaveManager.pending_auto_resume = false
+	if not SaveManager.data.session.active:
+		return
+
+	var session: Dictionary = SaveManager.data.session
+	var pos: Vector2 = Vector2(session.pos_x, session.pos_y)
+	player.global_position = pos
+	current_checkpoint_position = pos
+	current_checkpoint_height = session.height
+
+	if session.jump_boost_remaining > 0.0:
+		player.jump_boost_mult = JUMP_BOOST_MULT
+		_restart_timer(jump_boost_timer, session.jump_boost_remaining, session.jump_boost_remaining)
+	if session.ice_grip_remaining > 0.0:
+		ice_grip_active = true
+		_restart_timer(ice_grip_timer, session.ice_grip_remaining, session.ice_grip_remaining)
+	if session.weather_blessing_remaining > 0.0:
+		weather_blessing_active = true
+		_restart_timer(weather_blessing_timer, session.weather_blessing_remaining, session.weather_blessing_remaining)
+	_recompute_friction()
+
+
 func _spawn_recorded_death_markers() -> void:
 	for height in SaveManager.data.death_heights:
 		_add_death_marker(float(height))
@@ -491,7 +527,7 @@ func _setup_ambience_timers() -> void:
 	common_bird_timer.one_shot = true
 	add_child(common_bird_timer)
 	common_bird_timer.timeout.connect(_on_common_bird_timer)
-	_restart_bird_timer(common_bird_timer, 2.5, 5.0)
+	_restart_bird_timer(common_bird_timer, 5.0, 10.0)
 
 	special_bird_timer = Timer.new()
 	special_bird_timer.one_shot = true
@@ -573,7 +609,7 @@ func _on_common_bird_timer() -> void:
 	if not is_dead:
 		var from_left: bool = randf() < 0.5
 		_spawn_common_bird_from(_bird_spawn_position(from_left), 1.0 if from_left else -1.0)
-	_restart_bird_timer(common_bird_timer, 2.5, 5.0)
+	_restart_bird_timer(common_bird_timer, 5.0, 10.0)
 
 
 func _on_special_bird_timer() -> void:
@@ -605,7 +641,7 @@ func _spawn_shadow_bird() -> void:
 func _on_predator_timer() -> void:
 	if not is_dead:
 		var height: float = max(0.0, start_y - player.global_position.y) / PIXELS_PER_METER
-		var chance: float = clamp(0.5 * DIFFICULTY_EAGLE_CHANCE_MULT.get(difficulty, 1.0), 0.0, 0.95)
+		var chance: float = clamp(EAGLE_BASE_CHANCE * DIFFICULTY_EAGLE_CHANCE_MULT.get(difficulty, 1.0), 0.0, 0.95)
 		if height >= EAGLE_MIN_HEIGHT_M and randf() < chance:
 			_spawn_predator_bird()
 	_restart_timer(predator_timer, 30.0, 45.0)
@@ -710,6 +746,7 @@ func _process(delta: float) -> void:
 	_check_memories(height)
 	_check_zone_transition(height)
 	_check_season_transition(height)
+	_update_session_snapshot(height)
 
 	if not tutorial_hidden and SaveManager.data.stats.total_jumps > 0:
 		hud.hide_tutorial_hint()
@@ -727,6 +764,20 @@ func _soft_reset_to_spawn() -> void:
 	player.velocity = Vector2.ZERO
 	player.reset_charge()
 	spawn_protection_timer = SPAWN_PROTECTION_TIME
+
+
+func _update_session_snapshot(height: float) -> void:
+	var level_idx: int = max(current_level_idx, 0)
+	SaveManager.update_session_snapshot({
+		"pos_x": player.global_position.x,
+		"pos_y": player.global_position.y,
+		"height": height,
+		"season": SEASON_NAMES[level_idx],
+		"level": level_idx + 1,
+		"jump_boost_remaining": jump_boost_timer.time_left,
+		"ice_grip_remaining": ice_grip_timer.time_left,
+		"weather_blessing_remaining": weather_blessing_timer.time_left,
+	})
 
 
 func _check_memories(height: float) -> void:
@@ -808,6 +859,7 @@ func _die(height_reached: float) -> void:
 		return
 
 	is_dead = true
+	SaveManager.clear_session()
 
 	var lost_meters: float = max(0.0, height_reached - current_checkpoint_height)
 	var is_near_miss: bool = _nearest_checkpoint_distance(height_reached) <= NEAR_MISS_METERS
@@ -893,5 +945,6 @@ func _on_weather_blessing_expired() -> void:
 func _on_menu_requested() -> void:
 	get_tree().paused = false
 	MusicManager.stop_all()
+	SaveManager.clear_session()
 	SaveManager.save_game()
 	get_tree().change_scene_to_file("res://scenes/ui/MainMenu.tscn")

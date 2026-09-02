@@ -55,6 +55,12 @@ func _ready() -> void:
 		var path: String = SFX_PATHS[sfx_name]
 		if ResourceLoader.exists(path):
 			_cache[sfx_name] = load(path)
+		else:
+			# Fails gracefully either way (play() just no-ops), but bird/eagle
+			# calls are frequent enough during a run that a one-time debug
+			# warning is worth having rather than silently wondering why
+			# there's no sound.
+			print_debug("AudioManager: missing audio asset for '%s' (%s) — will play silently until added." % [sfx_name, path])
 
 
 func play(sfx_name: String) -> void:

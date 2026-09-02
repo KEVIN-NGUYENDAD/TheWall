@@ -27,9 +27,10 @@ const ACHIEVEMENTS: Dictionary = {
 
 var data: Dictionary = {}
 
-# Session-only navigation flag (not persisted): set by MainMenu's Continue
-# button, consumed by Main.gd on load. Never written to disk.
+# Session-only navigation flags (not persisted): set by MainMenu's Continue /
+# Continue Last Session buttons, consumed by Main.gd on load.
 var pending_continue: bool = false
+var pending_auto_resume: bool = false
 
 
 func _ready() -> void:
@@ -53,6 +54,17 @@ func _default_data() -> Dictionary:
 		"total_play_time": 0.0,
 		"difficulty": "MEDIUM",
 		"inventory": {"extra_life": 0, "safe_shield": 0},
+		"session": {
+			"active": false,
+			"pos_x": 0.0,
+			"pos_y": 0.0,
+			"height": 0.0,
+			"season": "Spring",
+			"level": 1,
+			"jump_boost_remaining": 0.0,
+			"ice_grip_remaining": 0.0,
+			"weather_blessing_remaining": 0.0,
+		},
 		"unlocked_skins": ["default"],
 		"selected_skin": "default",
 		"achievements": {},
@@ -95,6 +107,9 @@ func _merge_defaults(parsed: Dictionary) -> void:
 	for key in defaults.inventory:
 		if not parsed.inventory.has(key):
 			parsed.inventory[key] = defaults.inventory[key]
+	for key in defaults.session:
+		if not parsed.session.has(key):
+			parsed.session[key] = defaults.session[key]
 
 
 func save_game() -> void:
@@ -189,6 +204,26 @@ func record_progress(checkpoint_height: float, level: int, season: String) -> vo
 
 func add_play_time(delta: float) -> void:
 	data.total_play_time += delta
+
+
+# Continuously updated (in memory only) while a run is active, so whatever
+# the OS/closing the app flushes to disk (see `_notification` above) captures
+# an exact mid-run snapshot for Auto Resume — not just the last checkpoint.
+func update_session_snapshot(fields: Dictionary) -> void:
+	data.session.active = true
+	for key in fields:
+		data.session[key] = fields[key]
+
+
+# Called on a deliberate Main Menu exit or a real death — in both cases
+# there's no "exact mid-air spot" left to resume, so Auto Resume shouldn't
+# offer one; the regular checkpoint-based Continue still works normally.
+func clear_session() -> void:
+	data.session.active = false
+
+
+func has_active_session() -> bool:
+	return data.session.active
 
 
 func set_difficulty(difficulty: String) -> void:

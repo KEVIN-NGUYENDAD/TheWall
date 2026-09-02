@@ -8,7 +8,9 @@ extends Node
 # See audio/README.md for the current track mapping.
 
 const CROSSFADE_TIME: float = 4.0
-const SEASON_VOLUME_DB: float = -3.0
+# Balance pass: overall music volume reduced to ~40% of its previous level
+# (-3dB -> -11dB is roughly a 40% linear-loudness reduction).
+const SEASON_VOLUME_DB: float = -11.0
 const SILENT_DB: float = -80.0
 
 # Only 3 real tracks exist; adjacent seasons share one so the whole climb
@@ -21,7 +23,7 @@ const SEASON_TRACK_PATHS: Array = [
 	"res://audio/music/the_mountain-fantasy-quest-184140.mp3", # Storm
 ]
 const MENU_TRACK_PATH: String = "res://audio/music/velariomusic-happy-vibes-591803.mp3"
-const MENU_VOLUME_DB: float = -3.0
+const MENU_VOLUME_DB: float = -11.0
 
 var _season_streams: Array = []
 var _player_a: AudioStreamPlayer

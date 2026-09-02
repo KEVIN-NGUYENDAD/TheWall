@@ -7,9 +7,18 @@ const CHARGE_LOW_COLOR: Color = Color(0.3, 0.85, 0.4)
 const CHARGE_MID_COLOR: Color = Color(0.95, 0.85, 0.2)
 const CHARGE_HIGH_COLOR: Color = Color(0.95, 0.3, 0.25)
 
+const SEASON_DISPLAY: Dictionary = {
+	"SPRING": "🌸 SPRING",
+	"SUMMER": "☀ SUMMER",
+	"AUTUMN": "🍂 AUTUMN",
+	"WINTER": "❄ WINTER",
+	"STORM": "🌧 STORM",
+}
+
 @onready var height_label: Label = $HeightLabel
 @onready var best_label: Label = $BestLabel
 @onready var coin_label: Label = $CoinLabel
+@onready var season_label: Label = $SeasonLabel
 @onready var charge_label: Label = $ChargeLabel
 @onready var charge_bar_fill: ColorRect = $ChargeBarBG/ChargeBarFill
 @onready var toast: Panel = $Toast
@@ -34,6 +43,10 @@ func set_height(current: int, best: int) -> void:
 
 func set_coins(total: int) -> void:
 	coin_label.text = "%d" % total
+
+
+func set_season(season_name: String) -> void:
+	season_label.text = SEASON_DISPLAY.get(season_name, season_name)
 
 
 func set_charge(ratio: float) -> void:
