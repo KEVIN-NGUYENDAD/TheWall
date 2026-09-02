@@ -178,6 +178,7 @@ text = "HARD"
 custom_minimum_size = Vector2(0, 44)
 text = "Back"
 
+[connection signal="gui_input" from="NamePrompt/Dim" to="." method="_on_name_prompt_gui_input"]
 [connection signal="pressed" from="CenterContainer/VBoxContainer/PlayButton" to="." method="_on_play_pressed"]
 [connection signal="pressed" from="CenterContainer/VBoxContainer/ContinueLastSessionButton" to="." method="_on_continue_last_session_pressed"]
 [connection signal="pressed" from="CenterContainer/VBoxContainer/ContinueButton" to="." method="_on_continue_pressed"]

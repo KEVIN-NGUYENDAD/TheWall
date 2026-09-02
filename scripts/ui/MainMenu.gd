@@ -33,6 +33,20 @@ func _on_name_submitted(text: String) -> void:
 	_confirm_name(text)
 
 
+# iOS/iPadOS Safari only opens the virtual keyboard from a genuine user
+# gesture — grab_focus() called from _ready() (not a gesture) is silently
+# ignored there, even though it works fine on desktop/Android. Re-focusing
+# inside the player's first real tap on the name screen satisfies that
+# requirement and reliably opens the keyboard on iPhone/iPad Safari too.
+func _on_name_prompt_gui_input(event: InputEvent) -> void:
+	if not name_prompt.visible:
+		return
+	var is_press: bool = (event is InputEventScreenTouch and event.pressed) \
+		or (event is InputEventMouseButton and event.pressed)
+	if is_press:
+		name_edit.grab_focus()
+
+
 func _confirm_name(entered_text: String) -> void:
 	var entered: String = entered_text.strip_edges()
 	if entered == "":

@@ -30,13 +30,13 @@ theme_override_font_sizes/font_size = 26
 theme_override_colors/font_color = Color(1.0, 0.85, 0.2, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 0.85)
 theme_override_constants/outline_size = 4
-text = "LEVEL UP!"
+text = "NEW SEASON!"
 
 [node name="TitleLabel" type="Label" parent="Panel/VBox"]
 horizontal_alignment = 1
 theme_override_font_sizes/font_size = 16
 theme_override_colors/font_color = Color(0.9, 0.9, 0.95, 1)
-text = "NEW SEASON DISCOVERED"
+text = "The weather is changing..."
 
 [node name="NameLabel" type="Label" parent="Panel/VBox"]
 horizontal_alignment = 1

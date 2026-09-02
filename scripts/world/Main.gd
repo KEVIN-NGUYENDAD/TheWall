@@ -27,6 +27,8 @@ const FLOWER_DECOR_SCENE: PackedScene = preload("res://scenes/world/FlowerDecor.
 const SNOW_PATCH_DECOR_SCENE: PackedScene = preload("res://scenes/world/SnowPatchDecor.tscn")
 const SEASON_BANNER_SCENE: PackedScene = preload("res://scenes/ui/SeasonBanner.tscn")
 const THUNDER_FLASH_SCENE: PackedScene = preload("res://scenes/world/ThunderFlash.tscn")
+const LEVEL_UP_GLOW_SCENE: PackedScene = preload("res://scenes/effects/LevelUpGlow.tscn")
+const LEVEL_UP_RING_SCENE: PackedScene = preload("res://scenes/effects/LevelUpRing.tscn")
 
 const VIEWPORT_WIDTH: float = 540.0
 const EDGE_MARGIN: float = 90.0
@@ -110,15 +112,38 @@ const FOG_WINTER_BOOST: float = 0.35
 # farther gaps, narrower platforms.
 const DIFFICULTY_TRAP_MULT: Dictionary = {"EASY": 0.3, "MEDIUM": 1.0, "HARD": 1.6}
 const DIFFICULTY_HAZARD_MULT: Dictionary = {"EASY": 0.4, "MEDIUM": 1.0, "HARD": 1.5}
-const DIFFICULTY_GAP_MULT: Dictionary = {"EASY": 0.6, "MEDIUM": 0.85, "HARD": 1.2}
+# Easy Mode Rebalance: vertical gap cut a further 30% on top of its existing
+# 0.6 (0.6 * 0.7 = 0.42) — Medium/Hard untouched.
+const DIFFICULTY_GAP_MULT: Dictionary = {"EASY": 0.42, "MEDIUM": 0.85, "HARD": 1.2}
 const DIFFICULTY_BIRD_INTERVAL_MULT: Dictionary = {"EASY": 0.6, "MEDIUM": 1.0, "HARD": 1.6}
 const DIFFICULTY_EAGLE_CHANCE_MULT: Dictionary = {"EASY": 0.3, "MEDIUM": 1.0, "HARD": 1.6}
 const DIFFICULTY_PLATFORM_SCALE: Dictionary = {"EASY": 1.3, "MEDIUM": 1.0, "HARD": 0.75}
 const EAGLE_BASE_CHANCE: float = 0.25
 
+# Easy Mode Rebalance: horizontal reach between consecutive platforms is
+# constrained (Medium/Hard keep the old fully-free full-width placement —
+# only Easy gets this). MAX_HORIZONTAL_SHIFT is the full baseline budget
+# (VIEWPORT_WIDTH - 2*EDGE_MARGIN); Easy uses half of it. Platform density
+# is boosted 50% and Fake platforms are mostly removed so a beginner is
+# never stuck behind an unreachable or deceptive gap.
+const MAX_HORIZONTAL_SHIFT: float = 360.0
+const EASY_HORIZONTAL_SHIFT_MULT: float = 0.5
+const DIFFICULTY_PLATFORM_COUNT_MULT: Dictionary = {"EASY": 1.5, "MEDIUM": 1.0, "HARD": 1.0}
+const DIFFICULTY_FAKE_MULT: Dictionary = {"EASY": 0.2, "MEDIUM": 1.0, "HARD": 1.0}
+
 # Lives: 3 per run. Hitting 0 shows Game Over (Continue refills to 3 and
 # resumes at the checkpoint; Play Again refills to 3 and resets to height 0).
 const MAX_LIVES: int = 3
+
+# Player Level: a uniform, height-only progression, separate from Season —
+# +1 level every 100m climbed, uncapped, recomputed live from current
+# height (so it can dip if the player falls, then grows back on re-climb).
+# Each level adds a flat 3% to jump force via Player.level_jump_mult.
+const LEVEL_METERS: float = 100.0
+const JUMP_LEVEL_BONUS: float = 0.03
+const LEVEL_UP_INVULN_TIME: float = 1.0
+const LEVEL_UP_SHAKE_STRENGTH: float = 3.0
+const LEVEL_UP_SHAKE_DURATION: float = 0.2
 
 # Coin-reward power-ups (Shop).
 const BUFF_DURATION: float = 30.0
@@ -186,6 +211,7 @@ const CLOUD_DRIFT_RANGE: float = 620.0
 @onready var shop_screen = $ShopScreen
 @onready var rest_area_screen = $RestAreaScreen
 @onready var game_over_screen = $GameOverScreen
+@onready var level_up_popup = $LevelUpPopup
 
 @onready var mountains: Array = [
 	$ParallaxBackground/Far/Mountain1, $ParallaxBackground/Far/Mountain2,
@@ -215,6 +241,8 @@ var spawn_protection_timer: float = 0.0
 var current_level_idx: int = -1
 var difficulty: String = "MEDIUM"
 var lives_remaining: int = MAX_LIVES
+var player_level: int = 1
+var max_level_reached: int = 1
 
 var ice_grip_active: bool = false
 var weather_blessing_active: bool = false
@@ -260,6 +288,12 @@ func _ready() -> void:
 	_apply_auto_resume()
 	hud.set_lives(lives_remaining, MAX_LIVES)
 
+	var initial_height: float = max(0.0, start_y - player.global_position.y) / PIXELS_PER_METER
+	max_level_reached = _get_player_level(initial_height)
+	player_level = max_level_reached
+	player.level_jump_mult = 1.0 + (player_level - 1) * JUMP_LEVEL_BONUS
+	level_up_popup.bonus_text = "Jump +%d%%" % int(round(JUMP_LEVEL_BONUS * 100.0))
+
 	spawn_protection_timer = SPAWN_PROTECTION_TIME
 	MusicManager.start()
 	SaveManager.start_run()
@@ -271,7 +305,9 @@ func _generate_platforms() -> float:
 	spawn_position = Vector2(x, y - 60.0)
 	kill_y = y + FALL_DEATH_MARGIN
 
-	for i in range(PLATFORM_COUNT):
+	var platform_count: int = int(PLATFORM_COUNT * DIFFICULTY_PLATFORM_COUNT_MULT.get(difficulty, 1.0))
+
+	for i in range(platform_count):
 		var height: float = max(0.0, (spawn_position.y - y) / PIXELS_PER_METER)
 		var result: Dictionary = _spawn_platform_variant(i, x, y, height)
 		var platform: Node = result.node
@@ -285,10 +321,16 @@ func _generate_platforms() -> float:
 			if height >= SAFE_ZONE_HEIGHT_M and randf() < SPIKE_CHANCE:
 				_spawn_spike(Vector2(x, y))
 
-		if i < PLATFORM_COUNT - 1:
+		if i < platform_count - 1:
 			var gap_mult: float = DIFFICULTY_GAP_MULT.get(difficulty, 1.0)
 			y -= randf_range(MIN_GAP, MAX_GAP) * gap_mult
-			x = randf_range(EDGE_MARGIN, VIEWPORT_WIDTH - EDGE_MARGIN)
+			if difficulty == "EASY":
+				# Constrain horizontal reach relative to the previous platform
+				# (Medium/Hard keep the old fully-free full-width placement).
+				var max_shift: float = MAX_HORIZONTAL_SHIFT * EASY_HORIZONTAL_SHIFT_MULT
+				x = clamp(x + randf_range(-max_shift, max_shift), EDGE_MARGIN, VIEWPORT_WIDTH - EDGE_MARGIN)
+			else:
+				x = randf_range(EDGE_MARGIN, VIEWPORT_WIDTH - EDGE_MARGIN)
 
 	return y
 
@@ -309,21 +351,24 @@ func _spawn_platform_variant(i: int, x: float, y: float, height: float) -> Dicti
 		var level_idx: int = _get_level_index(height)
 		var hazard_mult: float = DIFFICULTY_HAZARD_MULT.get(difficulty, 1.0)
 		var trap_mult: float = DIFFICULTY_TRAP_MULT.get(difficulty, 1.0)
+		# Fake platforms are the one hazard a beginner can't yet read by
+		# color — mostly removed on Easy so a reachable path is guaranteed.
+		var fake_chance: float = FAKE_PLATFORM_CHANCE * DIFFICULTY_FAKE_MULT.get(difficulty, 1.0)
 		var moving_chance: float = clamp(LEVEL_MOVING_CHANCE[level_idx] * hazard_mult, 0.0, 0.9)
 		var collapsing_chance: float = clamp(LEVEL_COLLAPSING_CHANCE[level_idx] * hazard_mult, 0.0, 0.9)
 		var trap_chance: float = clamp(LEVEL_TRAP_CHANCE[level_idx] * trap_mult, 0.0, 0.9)
 
 		var roll: float = randf()
-		if roll < FAKE_PLATFORM_CHANCE:
+		if roll < fake_chance:
 			scene = FAKE_PLATFORM_SCENE
 			ptype = "fake"
-		elif roll < FAKE_PLATFORM_CHANCE + moving_chance:
+		elif roll < fake_chance + moving_chance:
 			scene = MOVING_PLATFORM_SCENE
 			ptype = "moving"
-		elif roll < FAKE_PLATFORM_CHANCE + moving_chance + collapsing_chance:
+		elif roll < fake_chance + moving_chance + collapsing_chance:
 			scene = COLLAPSING_PLATFORM_SCENE
 			ptype = "collapsing"
-		elif roll < FAKE_PLATFORM_CHANCE + moving_chance + collapsing_chance + trap_chance:
+		elif roll < fake_chance + moving_chance + collapsing_chance + trap_chance:
 			scene = TRAP_PLATFORM_SCENE
 			ptype = "trap"
 
@@ -377,6 +422,46 @@ func _zone_progress(height: float, zone: int) -> float:
 			return clamp((height - ZONE_SKY_START_M) / (ZONE_VOID_START_M - ZONE_SKY_START_M), 0.0, 1.0)
 		_:
 			return clamp((height - ZONE_VOID_START_M) / (VOID_INTENSITY_CAP_M - ZONE_VOID_START_M), 0.0, 1.0)
+
+
+func _get_player_level(height: float) -> int:
+	return int(max(height, 0.0) / LEVEL_METERS) + 1
+
+
+# Player Level tracks CURRENT height live (dips if the player falls, grows
+# back on re-climb) so jump force always matches the formula in the spec.
+# max_level_reached is a separate run-scoped ratchet used only to gate the
+# celebration so it fires once per new peak, not every time a threshold is
+# re-crossed while bouncing near a boundary.
+func _update_player_level(height: float) -> void:
+	var level: int = _get_player_level(height)
+	if level > max_level_reached:
+		max_level_reached = level
+		_on_player_level_up(level)
+	player_level = level
+	player.level_jump_mult = 1.0 + (player_level - 1) * JUMP_LEVEL_BONUS
+	hud.set_level_progress(player_level, fmod(max(height, 0.0), LEVEL_METERS) / LEVEL_METERS)
+
+
+func _on_player_level_up(level: int) -> void:
+	level_up_popup.show_level_up(level)
+	AudioManager.play("level_up")
+	_spawn_level_up_glow(player.global_position)
+	_spawn_level_up_ring(player.global_position)
+	player.shake_camera(LEVEL_UP_SHAKE_STRENGTH, LEVEL_UP_SHAKE_DURATION)
+	spawn_protection_timer = max(spawn_protection_timer, LEVEL_UP_INVULN_TIME)
+
+
+func _spawn_level_up_glow(pos: Vector2) -> void:
+	var glow: Node2D = LEVEL_UP_GLOW_SCENE.instantiate()
+	glow.position = pos
+	add_child(glow)
+
+
+func _spawn_level_up_ring(pos: Vector2) -> void:
+	var ring: Node2D = LEVEL_UP_RING_SCENE.instantiate()
+	ring.position = pos
+	add_child(ring)
 
 
 func _check_zone_transition(height: float) -> void:
@@ -848,10 +933,11 @@ func _process(delta: float) -> void:
 		spawn_protection_timer = max(spawn_protection_timer - delta, 0.0)
 
 	var height: float = max(0.0, start_y - player.global_position.y) / PIXELS_PER_METER + bonus_height_m
-	hud.set_height(int(height), SaveManager.data.best_height, max(current_level_idx, 0) + 1)
+	hud.set_height(int(height), SaveManager.data.best_height)
 	hud.set_charge(player.get_charge_ratio())
 	hud.set_coins(SaveManager.data.total_coins)
 	hud.set_lives(lives_remaining, MAX_LIVES)
+	_update_player_level(height)
 	SaveManager.update_best_height(height)
 	_check_memories(height)
 	_check_zone_transition(height)

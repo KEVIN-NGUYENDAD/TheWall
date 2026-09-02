@@ -1,4 +1,4 @@
-[gd_scene load_steps=17 format=3]
+[gd_scene load_steps=18 format=3]
 
 [ext_resource type="Script" path="res://scripts/world/Main.gd" id="1"]
 [ext_resource type="PackedScene" path="res://scenes/player/Player.tscn" id="2"]
@@ -17,6 +17,7 @@
 [ext_resource type="PackedScene" path="res://scenes/ui/GameOverScreen.tscn" id="15"]
 [ext_resource type="Script" path="res://scripts/world/FogLayer.gd" id="16"]
 [ext_resource type="Script" path="res://scripts/world/SeasonTint.gd" id="17"]
+[ext_resource type="PackedScene" path="res://scenes/ui/LevelUpPopup.tscn" id="18"]
 
 [node name="Main" type="Node2D"]
 script = ExtResource("1")
@@ -150,3 +151,5 @@ script = ExtResource("17")
 [node name="RestAreaScreen" parent="." instance=ExtResource("14")]
 
 [node name="GameOverScreen" parent="." instance=ExtResource("15")]
+
+[node name="LevelUpPopup" parent="." instance=ExtResource("18")]

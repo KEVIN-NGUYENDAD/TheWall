@@ -17,11 +17,15 @@ const SFX_VOLUME_DB: Dictionary = {
 	"checkpoint": 6.0,
 	"memory": 5.0,
 	"near_miss": 5.0,
-	"eagle": 3.0,
+	# Eagle is the "you got hit" collision sound — pushed up significantly
+	# from 3.0 so a hit is unmistakable, distinct from the gentle chirp.
+	"eagle": 9.0,
+	"level_up": 6.0,
 }
-# Bird chirp intentionally has no hype boost — it should sit quieter/gentler
-# than the boosted rewards above, not compete with them.
-const BIRD_CHIRP_VOLUME_DB: float = -6.0
+# Bird chirp (ambient reward-bird pickup) cut another 50% (~-6dB) on top of
+# its existing -6dB — it should sit well behind the hype-boosted sounds
+# above and the much louder eagle hit.
+const BIRD_CHIRP_VOLUME_DB: float = -12.0
 const HYPE_PITCH_VARIANCE: float = 0.14
 
 # Bird chirp fires on every reward-bird pickup, which can happen in quick
@@ -47,6 +51,7 @@ const SFX_PATHS: Dictionary = {
 	"click": "res://audio/sfx/click.ogg",
 	"unlock": "res://audio/sfx/unlock.ogg",
 	"eagle": "res://audio/eagle.mp3",
+	"level_up": "res://audio/sfx/level_up.ogg",
 }
 
 var _cache: Dictionary = {}

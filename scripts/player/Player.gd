@@ -31,6 +31,7 @@ const DASH_STRETCH: Vector2 = Vector2(1.5, 0.6)
 
 var ground_friction_mult: float = 1.0
 var jump_boost_mult: float = 1.0
+var level_jump_mult: float = 1.0
 
 var charge_time: float = 0.0
 var is_charging: bool = false
@@ -153,7 +154,7 @@ func _handle_charge_and_jump(delta: float) -> void:
 
 func _release_jump() -> void:
 	var charge_ratio: float = charge_time / MAX_CHARGE_TIME
-	velocity.y = -lerp(MIN_JUMP_SPEED, MAX_JUMP_SPEED, charge_ratio) * jump_boost_mult
+	velocity.y = -lerp(MIN_JUMP_SPEED, MAX_JUMP_SPEED, charge_ratio) * jump_boost_mult * level_jump_mult
 	is_charging = false
 	charge_time = 0.0
 	coyote_timer = 0.0
