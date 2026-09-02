@@ -18,12 +18,14 @@ Current Priority:
 4. Weather Gameplay — done (Winter ice / Storm wet friction reduction, Ice Grip/Weather Blessing buffs can override it)
 5. Final Beta Polish — done (season-based music crossfade, Shop with 5 coin rewards, Easy/Medium/Hard difficulty, gold coins, bigger Common Bird, eagle warning sound, Trap Platform fixed, mobile controls shrunk 50%, Statistics contrast improved)
 6. Final Beta Fix & Balance — done (Auto Resume with a real mid-run snapshot, ~50% overall difficulty reduction with Hard retuned to stay challenging, Season HUD + Season Guide, music volume cut to ~40%, missing-SFX debug warnings, mobile controls shrunk a further 20%, birds/butterflies halved for less clutter)
-7. Validate Beta Build — done (headless + rendered validation across all three passes; see CHANGELOG_ALPHA_v1.md and commit history for detail)
+7. Final Beta Gameplay & Immersion Fix — done (fixed low-contrast player/bird colors that blended into the sky, darkened Eagle to look threatening, brightened coins/trap platforms, music cut to ~1/3 again with SFX untouched, bird_chirp.ogg hook, LEVEL UP + Rest Area at 100/300/600/900m, difficulty shifted down another full tier)
+8. Validate Beta Build — done (headless + rendered validation across all four passes; see CHANGELOG_ALPHA_v1.md and commit history for detail)
 
 Next up:
 - Playtest on real Web/iPhone/iPad/Android hardware (everything so far is automated/headless-validated only)
-- Real SFX asset files still missing (music is real; jump/dash/checkpoint/etc. hooks are wired but silent — now log a debug warning instead of failing silently)
-- web_release/ build artifacts changed on disk outside this pass's edits (not authored by this pass) — re-export before shipping if they're stale
+- Real SFX asset files still missing (music is real; jump/dash/checkpoint/bird_chirp/eagle/etc. hooks are wired but silent — log a debug warning instead of failing silently)
+- web_release/ build artifacts keep changing on disk outside these passes' edits (not authored by any of them) — re-export before shipping if stale
+- Falling back below a level after a LEVEL UP, then climbing back past it, re-triggers the celebration/Rest Area — acceptable but worth knowing about
 
 Git Tags:
 - v0.1-prealpha
