@@ -6,13 +6,11 @@ signal coins_changed(total: int)
 
 const SAVE_PATH: String = "user://savegame.json"
 
-const SKINS: Dictionary = {
-	"default": {"name": "Default", "color": Color(1.0, 0.45, 0.1), "cost": 0},
-	"red": {"name": "Red", "color": Color(0.9, 0.15, 0.15), "cost": 25},
-	"yellow": {"name": "Yellow", "color": Color(0.95, 0.85, 0.2), "cost": 50},
-	"purple": {"name": "Purple", "color": Color(0.6, 0.3, 0.9), "cost": 100},
-	"neon": {"name": "Neon", "color": Color(0.2, 1.0, 0.45), "cost": 200},
-}
+# Permanent, one-time-purchase Upgrades (replaces the old Skins menu, which
+# only changed color with no gameplay value, and the old Shop, which only
+# sold temporary 30s buffs). Prices and effects live in UpgradeScreen.gd /
+# Main.gd; this dict only tracks ownership.
+const UPGRADE_IDS: Array = ["coin_magnet", "jump_boost", "shield", "double_jump", "extra_heart", "speed_boost"]
 
 const ACHIEVEMENTS: Dictionary = {
 	"first_jump": {"name": "First Jump", "desc": "Perform your first jump."},
@@ -53,7 +51,10 @@ func _default_data() -> Dictionary:
 		"total_coins": 0,
 		"total_play_time": 0.0,
 		"difficulty": "MEDIUM",
-		"inventory": {"extra_life": 0, "safe_shield": 0},
+		"upgrades": {
+			"coin_magnet": false, "jump_boost": false, "shield": false,
+			"double_jump": false, "extra_heart": false, "speed_boost": false,
+		},
 		"session": {
 			"active": false,
 			"pos_x": 0.0,
@@ -61,13 +62,8 @@ func _default_data() -> Dictionary:
 			"height": 0.0,
 			"season": "Spring",
 			"level": 1,
-			"jump_boost_remaining": 0.0,
-			"ice_grip_remaining": 0.0,
-			"weather_blessing_remaining": 0.0,
 			"lives": 3,
 		},
-		"unlocked_skins": ["default"],
-		"selected_skin": "default",
 		"achievements": {},
 		"death_heights": [],
 		"memories_seen": [],
@@ -105,9 +101,9 @@ func _merge_defaults(parsed: Dictionary) -> void:
 	for key in defaults.stats:
 		if not parsed.stats.has(key):
 			parsed.stats[key] = defaults.stats[key]
-	for key in defaults.inventory:
-		if not parsed.inventory.has(key):
-			parsed.inventory[key] = defaults.inventory[key]
+	for key in defaults.upgrades:
+		if not parsed.upgrades.has(key):
+			parsed.upgrades[key] = defaults.upgrades[key]
 	for key in defaults.session:
 		if not parsed.session.has(key):
 			parsed.session[key] = defaults.session[key]
@@ -242,47 +238,22 @@ func spend_coins(amount: int) -> bool:
 	return true
 
 
-func add_inventory_item(item: String, count: int = 1) -> void:
-	data.inventory[item] = data.inventory.get(item, 0) + count
-	save_game()
+func has_upgrade(id: String) -> bool:
+	return data.upgrades.get(id, false)
 
 
-func use_inventory_item(item: String) -> bool:
-	if data.inventory.get(item, 0) <= 0:
+# One-time purchase: fails if already owned or coins are short. Effects are
+# applied by Main.gd (some need to take hold immediately mid-run, e.g. Extra
+# Heart or Shield), this only tracks ownership + spends the coins.
+func purchase_upgrade(id: String, cost: int) -> bool:
+	if has_upgrade(id):
 		return false
-	data.inventory[item] -= 1
-	save_game()
-	return true
-
-
-func unlock_skin(id: String) -> bool:
-	if not SKINS.has(id):
+	if not spend_coins(cost):
 		return false
-	if data.unlocked_skins.has(id):
-		return true
-	var cost: int = SKINS[id].cost
-	if data.total_coins < cost:
-		return false
-	data.total_coins -= cost
-	data.unlocked_skins.append(id)
-	coins_changed.emit(data.total_coins)
+	data.upgrades[id] = true
 	data_changed.emit()
 	save_game()
 	return true
-
-
-func select_skin(id: String) -> void:
-	if data.unlocked_skins.has(id):
-		data.selected_skin = id
-		data_changed.emit()
-		save_game()
-
-
-func get_selected_skin_color() -> Color:
-	var id: String = data.selected_skin
-	if SKINS.has(id):
-		return SKINS[id].color
-	return SKINS["default"].color
 
 
 func has_seen_memory(height: int) -> bool:

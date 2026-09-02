@@ -1,7 +1,7 @@
 extends CanvasLayer
 
 signal save_position_requested
-signal shop_requested
+signal upgrade_requested
 
 const CHARGE_LOW_COLOR: Color = Color(0.3, 0.85, 0.4)
 const CHARGE_MID_COLOR: Color = Color(0.95, 0.85, 0.2)
@@ -22,7 +22,6 @@ const SEASON_DISPLAY: Dictionary = {
 @onready var lives_label: Label = $LivesLabel
 @onready var level_label: Label = $LevelLabel
 @onready var level_progress_fill: ColorRect = $LevelProgressBG/LevelProgressFill
-@onready var level_progress_label: Label = $LevelProgressBG/LevelProgressLabel
 @onready var charge_label: Label = $ChargeLabel
 @onready var charge_bar_fill: ColorRect = $ChargeBarBG/ChargeBarFill
 @onready var toast: Panel = $Toast
@@ -46,10 +45,8 @@ func set_height(current: int, best: int) -> void:
 
 
 func set_level_progress(level: int, ratio: float) -> void:
-	level_label.text = "Level %d" % level
-	var clamped: float = clamp(ratio, 0.0, 1.0)
-	level_progress_fill.anchor_right = clamped
-	level_progress_label.text = "%d%%" % int(round(clamped * 100.0))
+	level_label.text = "Level %d → %d" % [level, level + 1]
+	level_progress_fill.anchor_right = clamp(ratio, 0.0, 1.0)
 
 
 func set_coins(total: int) -> void:
@@ -109,9 +106,9 @@ func _on_save_position_pressed() -> void:
 	save_position_requested.emit()
 
 
-func _on_shop_pressed() -> void:
+func _on_upgrade_pressed() -> void:
 	AudioManager.play("click")
-	shop_requested.emit()
+	upgrade_requested.emit()
 
 
 func _on_menu_pressed() -> void:

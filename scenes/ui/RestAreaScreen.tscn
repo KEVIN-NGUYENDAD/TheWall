@@ -68,9 +68,9 @@ custom_minimum_size = Vector2(0, 8)
 custom_minimum_size = Vector2(0, 52)
 text = "Save Progress"
 
-[node name="ShopButton" type="Button" parent="Panel/VBox"]
+[node name="UpgradeButton" type="Button" parent="Panel/VBox"]
 custom_minimum_size = Vector2(0, 52)
-text = "Shop"
+text = "Upgrades"
 
 [node name="ContinueButton" type="Button" parent="Panel/VBox"]
 custom_minimum_size = Vector2(0, 56)
@@ -78,5 +78,5 @@ theme_override_font_sizes/font_size = 20
 text = "Continue Climbing"
 
 [connection signal="pressed" from="Panel/VBox/SaveButton" to="." method="_on_save_pressed"]
-[connection signal="pressed" from="Panel/VBox/ShopButton" to="." method="_on_shop_pressed"]
+[connection signal="pressed" from="Panel/VBox/UpgradeButton" to="." method="_on_upgrade_pressed"]
 [connection signal="pressed" from="Panel/VBox/ContinueButton" to="." method="_on_continue_pressed"]

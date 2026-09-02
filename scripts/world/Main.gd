@@ -131,23 +131,38 @@ const EASY_HORIZONTAL_SHIFT_MULT: float = 0.5
 const DIFFICULTY_PLATFORM_COUNT_MULT: Dictionary = {"EASY": 1.5, "MEDIUM": 1.0, "HARD": 1.0}
 const DIFFICULTY_FAKE_MULT: Dictionary = {"EASY": 0.2, "MEDIUM": 1.0, "HARD": 1.0}
 
-# Lives: 3 per run. Hitting 0 shows Game Over (Continue refills to 3 and
-# resumes at the checkpoint; Play Again refills to 3 and resets to height 0).
-const MAX_LIVES: int = 3
+# Comprehensive Gameplay Pass: the first 100m on Easy gets its own extra
+# layer of safety on top of the Easy numbers above — no fake platforms at
+# all, no birds at all (Storm can't happen this early anyway, since Winter
+# is always the first season band), gaps tightened further still. This is
+# purely a learning window; normal Easy numbers resume past 100m.
+const BEGINNER_ZONE_HEIGHT_M: float = 100.0
+const BEGINNER_VERTICAL_MULT: float = 0.7
+const BEGINNER_HORIZONTAL_MULT: float = 0.6
+
+# Lives: 3 per run by default (+1 with the Extra Heart upgrade). Hitting 0
+# shows Game Over (Continue refills to max and resumes at the checkpoint;
+# Play Again refills to max and resets to height 0).
+const BASE_MAX_LIVES: int = 3
 
 # Player Level: a uniform, height-only progression, separate from Season —
-# +1 level every 100m climbed, uncapped, recomputed live from current
-# height (so it can dip if the player falls, then grows back on re-climb).
-# Each level adds a flat 3% to jump force via Player.level_jump_mult.
-const LEVEL_METERS: float = 100.0
-const JUMP_LEVEL_BONUS: float = 0.03
+# +1 level every 50m climbed, uncapped, recomputed live from current height
+# (so it can dip if the player falls, then grows back on re-climb). Each
+# level adds a flat 5% to jump force via Player.level_jump_mult.
+const LEVEL_METERS: float = 50.0
+const JUMP_LEVEL_BONUS: float = 0.05
 const LEVEL_UP_INVULN_TIME: float = 1.0
-const LEVEL_UP_SHAKE_STRENGTH: float = 3.0
-const LEVEL_UP_SHAKE_DURATION: float = 0.2
+const LEVEL_UP_SHAKE_STRENGTH: float = 7.0
+const LEVEL_UP_SHAKE_DURATION: float = 0.35
+const LEVEL_UP_PARTICLE_COUNT: int = 26
+const LEVEL_UP_PARTICLE_COLOR: Color = Color(1.0, 0.85, 0.2, 1.0)
 
-# Coin-reward power-ups (Shop).
-const BUFF_DURATION: float = 30.0
-const JUMP_BOOST_MULT: float = 1.25
+# Permanent Upgrades (replaces the old Shop's temporary 30s buffs).
+const UPGRADE_JUMP_MULT: float = 1.15
+const UPGRADE_SPEED_MULT: float = 1.2
+const SHIELD_COOLDOWN_TIME: float = 45.0
+const COIN_MAGNET_RADIUS: float = 150.0
+const COIN_MAGNET_SPEED: float = 420.0
 
 const MEMORY_HEIGHTS: Array = [100, 300, 700, 1500]
 const MEMORY_TEXTS: Dictionary = {
@@ -208,7 +223,7 @@ const CLOUD_DRIFT_RANGE: float = 620.0
 @onready var thunder_flash = $ThunderFlash
 @onready var fog_layer = $ParallaxBackground/FogLayer
 @onready var season_tint = $SeasonTint
-@onready var shop_screen = $ShopScreen
+@onready var upgrade_screen = $UpgradeScreen
 @onready var rest_area_screen = $RestAreaScreen
 @onready var game_over_screen = $GameOverScreen
 @onready var level_up_popup = $LevelUpPopup
@@ -240,12 +255,12 @@ var cloud_drift_t: float = 0.0
 var spawn_protection_timer: float = 0.0
 var current_level_idx: int = -1
 var difficulty: String = "MEDIUM"
-var lives_remaining: int = MAX_LIVES
+var max_lives: int = BASE_MAX_LIVES
+var lives_remaining: int = BASE_MAX_LIVES
 var player_level: int = 1
 var max_level_reached: int = 1
-
-var ice_grip_active: bool = false
-var weather_blessing_active: bool = false
+var current_height: float = 0.0
+var shield_ready: bool = false
 
 var common_bird_timer: Timer
 var special_bird_timer: Timer
@@ -253,9 +268,11 @@ var predator_timer: Timer
 var feather_timer: Timer
 var weather_timer: Timer
 var thunder_timer: Timer
-var jump_boost_timer: Timer
-var ice_grip_timer: Timer
-var weather_blessing_timer: Timer
+var shield_timer: Timer
+
+
+func _is_beginner_zone() -> bool:
+	return difficulty == "EASY" and current_height < BEGINNER_ZONE_HEIGHT_M
 
 
 func _ready() -> void:
@@ -266,14 +283,16 @@ func _ready() -> void:
 	player.landed_hard.connect(_on_player_landed_hard)
 	player.dashed.connect(_on_player_dashed)
 	hud.save_position_requested.connect(_on_save_position_requested)
-	hud.shop_requested.connect(_on_shop_requested)
-	shop_screen.item_purchased.connect(_on_item_purchased)
+	hud.upgrade_requested.connect(_on_upgrade_requested)
+	upgrade_screen.upgrade_purchased.connect(_on_upgrade_purchased)
 	rest_area_screen.save_requested.connect(_on_save_position_requested)
-	rest_area_screen.shop_requested.connect(_on_shop_requested)
+	rest_area_screen.upgrade_requested.connect(_on_upgrade_requested)
 	rest_area_screen.continue_requested.connect(_on_rest_area_continue)
 	game_over_screen.continue_requested.connect(_on_game_over_continue_requested)
 	game_over_screen.play_again_requested.connect(_on_game_over_play_again_requested)
 	game_over_screen.menu_requested.connect(_on_menu_requested)
+
+	_apply_upgrades()
 
 	var top_y: float = _generate_platforms()
 	player.global_position = spawn_position
@@ -286,7 +305,7 @@ func _ready() -> void:
 	_spawn_recorded_death_markers()
 	_setup_ambience_timers()
 	_apply_auto_resume()
-	hud.set_lives(lives_remaining, MAX_LIVES)
+	hud.set_lives(lives_remaining, max_lives)
 
 	var initial_height: float = max(0.0, start_y - player.global_position.y) / PIXELS_PER_METER
 	max_level_reached = _get_player_level(initial_height)
@@ -297,6 +316,17 @@ func _ready() -> void:
 	spawn_protection_timer = SPAWN_PROTECTION_TIME
 	MusicManager.start()
 	SaveManager.start_run()
+
+
+# Permanent Upgrades take effect once at load; extra_heart/shield/etc. also
+# get applied immediately in _on_upgrade_purchased() if bought mid-run.
+func _apply_upgrades() -> void:
+	max_lives = BASE_MAX_LIVES + (1 if SaveManager.has_upgrade("extra_heart") else 0)
+	lives_remaining = max_lives
+	shield_ready = SaveManager.has_upgrade("shield")
+	player.has_double_jump = SaveManager.has_upgrade("double_jump")
+	player.upgrade_jump_mult = UPGRADE_JUMP_MULT if SaveManager.has_upgrade("jump_boost") else 1.0
+	player.speed_mult = UPGRADE_SPEED_MULT if SaveManager.has_upgrade("speed_boost") else 1.0
 
 
 func _generate_platforms() -> float:
@@ -322,12 +352,18 @@ func _generate_platforms() -> float:
 				_spawn_spike(Vector2(x, y))
 
 		if i < platform_count - 1:
+			var beginner: bool = difficulty == "EASY" and height < BEGINNER_ZONE_HEIGHT_M
 			var gap_mult: float = DIFFICULTY_GAP_MULT.get(difficulty, 1.0)
+			if beginner:
+				gap_mult *= BEGINNER_VERTICAL_MULT
 			y -= randf_range(MIN_GAP, MAX_GAP) * gap_mult
 			if difficulty == "EASY":
 				# Constrain horizontal reach relative to the previous platform
 				# (Medium/Hard keep the old fully-free full-width placement).
-				var max_shift: float = MAX_HORIZONTAL_SHIFT * EASY_HORIZONTAL_SHIFT_MULT
+				var shift_mult: float = EASY_HORIZONTAL_SHIFT_MULT
+				if beginner:
+					shift_mult *= BEGINNER_HORIZONTAL_MULT
+				var max_shift: float = MAX_HORIZONTAL_SHIFT * shift_mult
 				x = clamp(x + randf_range(-max_shift, max_shift), EDGE_MARGIN, VIEWPORT_WIDTH - EDGE_MARGIN)
 			else:
 				x = randf_range(EDGE_MARGIN, VIEWPORT_WIDTH - EDGE_MARGIN)
@@ -352,8 +388,9 @@ func _spawn_platform_variant(i: int, x: float, y: float, height: float) -> Dicti
 		var hazard_mult: float = DIFFICULTY_HAZARD_MULT.get(difficulty, 1.0)
 		var trap_mult: float = DIFFICULTY_TRAP_MULT.get(difficulty, 1.0)
 		# Fake platforms are the one hazard a beginner can't yet read by
-		# color — mostly removed on Easy so a reachable path is guaranteed.
-		var fake_chance: float = FAKE_PLATFORM_CHANCE * DIFFICULTY_FAKE_MULT.get(difficulty, 1.0)
+		# color — mostly removed on Easy, fully off in the first 100m.
+		var beginner: bool = difficulty == "EASY" and height < BEGINNER_ZONE_HEIGHT_M
+		var fake_chance: float = 0.0 if beginner else FAKE_PLATFORM_CHANCE * DIFFICULTY_FAKE_MULT.get(difficulty, 1.0)
 		var moving_chance: float = clamp(LEVEL_MOVING_CHANCE[level_idx] * hazard_mult, 0.0, 0.9)
 		var collapsing_chance: float = clamp(LEVEL_COLLAPSING_CHANCE[level_idx] * hazard_mult, 0.0, 0.9)
 		var trap_chance: float = clamp(LEVEL_TRAP_CHANCE[level_idx] * trap_mult, 0.0, 0.9)
@@ -448,6 +485,8 @@ func _on_player_level_up(level: int) -> void:
 	AudioManager.play("level_up")
 	_spawn_level_up_glow(player.global_position)
 	_spawn_level_up_ring(player.global_position)
+	_spawn_particle_burst(player.global_position, LEVEL_UP_PARTICLE_COLOR, LEVEL_UP_PARTICLE_COUNT, 220.0, 0.7)
+	thunder_flash.flash()
 	player.shake_camera(LEVEL_UP_SHAKE_STRENGTH, LEVEL_UP_SHAKE_DURATION)
 	spawn_protection_timer = max(spawn_protection_timer, LEVEL_UP_INVULN_TIME)
 
@@ -503,9 +542,9 @@ func _check_season_transition(height: float) -> void:
 	current_sky_color = SEASON_SKY_COLOR[level_idx]
 
 	var interval: float = WEATHER_INTERVAL.get(level_idx, 0.0)
-	if interval > 0.0 and not weather_blessing_active:
+	if interval > 0.0:
 		_restart_timer(weather_timer, interval, interval * 1.6)
-	if level_idx == STORM_LEVEL_IDX and not weather_blessing_active:
+	if level_idx == STORM_LEVEL_IDX:
 		_restart_timer(thunder_timer, THUNDER_INTERVAL_MIN, THUNDER_INTERVAL_MAX)
 
 	if leveled_up:
@@ -529,17 +568,12 @@ func _on_level_up_pause_ended(height: int) -> void:
 
 
 func _on_rest_area_continue() -> void:
-	shop_screen.visible = false
+	upgrade_screen.visible = false
 	get_tree().paused = false
 
 
-# Combines the base season friction with any active buffs. Called whenever
-# either the season or a buff's active state changes, so nothing can stomp
-# on a value another system just set.
 func _recompute_friction() -> void:
-	if ice_grip_active or weather_blessing_active:
-		player.ground_friction_mult = 1.0
-	elif current_level_idx >= 0:
+	if current_level_idx >= 0:
 		player.ground_friction_mult = SEASON_FRICTION_MULT[current_level_idx]
 	else:
 		player.ground_friction_mult = 1.0
@@ -640,19 +674,9 @@ func _apply_auto_resume() -> void:
 	player.global_position = pos
 	current_checkpoint_position = pos
 	current_checkpoint_height = session.height
-	lives_remaining = int(session.get("lives", MAX_LIVES))
+	lives_remaining = int(session.get("lives", max_lives))
 	if lives_remaining <= 0:
-		lives_remaining = MAX_LIVES
-
-	if session.jump_boost_remaining > 0.0:
-		player.jump_boost_mult = JUMP_BOOST_MULT
-		_restart_timer(jump_boost_timer, session.jump_boost_remaining, session.jump_boost_remaining)
-	if session.ice_grip_remaining > 0.0:
-		ice_grip_active = true
-		_restart_timer(ice_grip_timer, session.ice_grip_remaining, session.ice_grip_remaining)
-	if session.weather_blessing_remaining > 0.0:
-		weather_blessing_active = true
-		_restart_timer(weather_blessing_timer, session.weather_blessing_remaining, session.weather_blessing_remaining)
+		lives_remaining = max_lives
 	_recompute_friction()
 
 
@@ -738,20 +762,10 @@ func _setup_ambience_timers() -> void:
 	add_child(thunder_timer)
 	thunder_timer.timeout.connect(_on_thunder_timer)
 
-	jump_boost_timer = Timer.new()
-	jump_boost_timer.one_shot = true
-	add_child(jump_boost_timer)
-	jump_boost_timer.timeout.connect(_on_jump_boost_expired)
-
-	ice_grip_timer = Timer.new()
-	ice_grip_timer.one_shot = true
-	add_child(ice_grip_timer)
-	ice_grip_timer.timeout.connect(_on_ice_grip_expired)
-
-	weather_blessing_timer = Timer.new()
-	weather_blessing_timer.one_shot = true
-	add_child(weather_blessing_timer)
-	weather_blessing_timer.timeout.connect(_on_weather_blessing_expired)
+	shield_timer = Timer.new()
+	shield_timer.one_shot = true
+	add_child(shield_timer)
+	shield_timer.timeout.connect(_on_shield_recharged)
 
 
 func _restart_timer(t: Timer, min_s: float, max_s: float) -> void:
@@ -787,14 +801,14 @@ func _on_common_bird_collected(bird: Node2D) -> void:
 
 
 func _on_common_bird_timer() -> void:
-	if not is_dead:
+	if not is_dead and not _is_beginner_zone():
 		var from_left: bool = randf() < 0.5
 		_spawn_common_bird_from(_bird_spawn_position(from_left), 1.0 if from_left else -1.0)
 	_restart_bird_timer(common_bird_timer, 10.0, 20.0)
 
 
 func _on_special_bird_timer() -> void:
-	if not is_dead:
+	if not is_dead and not _is_beginner_zone():
 		var roll: float = randf()
 		if current_zone == 2 and roll < 0.5:
 			_spawn_shadow_bird()
@@ -868,10 +882,9 @@ func _spawn_feather() -> void:
 
 
 func _on_weather_timer() -> void:
-	var effective_level: int = 0 if weather_blessing_active else current_level_idx
 	if not is_dead:
-		_spawn_weather_particle(effective_level)
-	var interval: float = WEATHER_INTERVAL.get(effective_level, 0.0)
+		_spawn_weather_particle(current_level_idx)
+	var interval: float = WEATHER_INTERVAL.get(current_level_idx, 0.0)
 	if interval > 0.0:
 		_restart_timer(weather_timer, interval, interval * 1.6)
 
@@ -914,7 +927,7 @@ func _spawn_snowflake(center: Vector2, depth_mult: float) -> void:
 
 
 func _on_thunder_timer() -> void:
-	if not is_dead and current_level_idx == STORM_LEVEL_IDX and not weather_blessing_active:
+	if not is_dead and current_level_idx == STORM_LEVEL_IDX:
 		thunder_flash.flash()
 		_restart_timer(thunder_timer, THUNDER_INTERVAL_MIN, THUNDER_INTERVAL_MAX)
 
@@ -933,10 +946,11 @@ func _process(delta: float) -> void:
 		spawn_protection_timer = max(spawn_protection_timer - delta, 0.0)
 
 	var height: float = max(0.0, start_y - player.global_position.y) / PIXELS_PER_METER + bonus_height_m
+	current_height = height
 	hud.set_height(int(height), SaveManager.data.best_height)
 	hud.set_charge(player.get_charge_ratio())
 	hud.set_coins(SaveManager.data.total_coins)
-	hud.set_lives(lives_remaining, MAX_LIVES)
+	hud.set_lives(lives_remaining, max_lives)
 	_update_player_level(height)
 	SaveManager.update_best_height(height)
 	_check_memories(height)
@@ -971,9 +985,6 @@ func _update_session_snapshot(height: float) -> void:
 		"height": height,
 		"season": SEASON_NAMES[level_idx],
 		"level": level_idx + 1,
-		"jump_boost_remaining": jump_boost_timer.time_left,
-		"ice_grip_remaining": ice_grip_timer.time_left,
-		"weather_blessing_remaining": weather_blessing_timer.time_left,
 		"lives": lives_remaining,
 	})
 
@@ -1040,16 +1051,10 @@ func _nearest_checkpoint_distance(height: float) -> float:
 
 
 func _die(height_reached: float) -> void:
-	if SaveManager.use_inventory_item("extra_life"):
-		hud.show_toast("Extra Life used!")
-		player.global_position = current_checkpoint_position
-		player.velocity = Vector2.ZERO
-		player.reset_charge()
-		spawn_protection_timer = SPAWN_PROTECTION_TIME
-		return
-
-	if SaveManager.use_inventory_item("safe_shield"):
-		hud.show_toast("Safe Shield used!")
+	if SaveManager.has_upgrade("shield") and shield_ready:
+		shield_ready = false
+		shield_timer.start(SHIELD_COOLDOWN_TIME)
+		hud.show_toast("Shield absorbed the hit!")
 		player.global_position = current_checkpoint_position
 		player.velocity = Vector2.ZERO
 		player.reset_charge()
@@ -1071,7 +1076,7 @@ func _die(height_reached: float) -> void:
 		AudioManager.play("death")
 
 	lives_remaining = max(lives_remaining - 1, 0)
-	hud.set_lives(lives_remaining, MAX_LIVES)
+	hud.set_lives(lives_remaining, max_lives)
 	get_tree().paused = true
 
 	if lives_remaining > 0:
@@ -1092,14 +1097,14 @@ func _on_respawn_requested() -> void:
 # Game Over (0 lives): Continue refills lives and resumes at the last
 # checkpoint; Play Again refills lives and restarts the climb from 0m.
 func _on_game_over_continue_requested() -> void:
-	lives_remaining = MAX_LIVES
-	hud.set_lives(lives_remaining, MAX_LIVES)
+	lives_remaining = max_lives
+	hud.set_lives(lives_remaining, max_lives)
 	_on_respawn_requested()
 
 
 func _on_game_over_play_again_requested() -> void:
-	lives_remaining = MAX_LIVES
-	hud.set_lives(lives_remaining, MAX_LIVES)
+	lives_remaining = max_lives
+	hud.set_lives(lives_remaining, max_lives)
 	current_checkpoint_position = spawn_position
 	current_checkpoint_height = 0.0
 	_on_respawn_requested()
@@ -1120,46 +1125,39 @@ func _on_save_position_requested() -> void:
 	hud.show_toast("Position Saved")
 
 
-func _on_shop_requested() -> void:
-	shop_screen.open()
+func _on_upgrade_requested() -> void:
+	upgrade_screen.open()
 
 
-func _on_item_purchased(item_id: String) -> void:
+# All Upgrades are permanent, one-time purchases — apply the effect
+# immediately so buying mid-run feels instant, not just "next run."
+func _on_upgrade_purchased(item_id: String) -> void:
 	match item_id:
-		"extra_life":
-			SaveManager.add_inventory_item("extra_life", 1)
-			hud.show_toast("Extra Life added!")
-		"safe_shield":
-			SaveManager.add_inventory_item("safe_shield", 1)
-			hud.show_toast("Safe Shield added!")
+		"extra_heart":
+			max_lives += 1
+			lives_remaining += 1
+			hud.set_lives(lives_remaining, max_lives)
+			hud.show_toast("Extra Heart! Max lives +1")
+		"shield":
+			shield_ready = true
+			hud.show_toast("Shield equipped!")
+		"double_jump":
+			player.has_double_jump = true
+			hud.show_toast("Double Jump unlocked!")
 		"jump_boost":
-			player.jump_boost_mult = JUMP_BOOST_MULT
-			_restart_timer(jump_boost_timer, BUFF_DURATION, BUFF_DURATION)
-			hud.show_toast("Jump Boost active for 30s!")
-		"ice_grip":
-			ice_grip_active = true
-			_recompute_friction()
-			_restart_timer(ice_grip_timer, BUFF_DURATION, BUFF_DURATION)
-			hud.show_toast("Ice Grip active for 30s!")
-		"weather_blessing":
-			weather_blessing_active = true
-			_recompute_friction()
-			_restart_timer(weather_blessing_timer, BUFF_DURATION, BUFF_DURATION)
-			hud.show_toast("Weather Blessing active for 30s!")
+			player.upgrade_jump_mult = UPGRADE_JUMP_MULT
+			hud.show_toast("Jump Boost equipped!")
+		"speed_boost":
+			player.speed_mult = UPGRADE_SPEED_MULT
+			hud.show_toast("Speed Boost equipped!")
+		"coin_magnet":
+			hud.show_toast("Coin Magnet equipped!")
 
 
-func _on_jump_boost_expired() -> void:
-	player.jump_boost_mult = 1.0
-
-
-func _on_ice_grip_expired() -> void:
-	ice_grip_active = false
-	_recompute_friction()
-
-
-func _on_weather_blessing_expired() -> void:
-	weather_blessing_active = false
-	_recompute_friction()
+func _on_shield_recharged() -> void:
+	if SaveManager.has_upgrade("shield"):
+		shield_ready = true
+		hud.show_toast("Shield recharged!")
 
 
 func _on_menu_requested() -> void:

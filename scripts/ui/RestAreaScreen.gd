@@ -1,7 +1,7 @@
 extends CanvasLayer
 
 signal save_requested
-signal shop_requested
+signal upgrade_requested
 signal continue_requested
 
 @onready var height_label: Label = $Panel/VBox/HeightLabel
@@ -25,9 +25,9 @@ func _on_save_pressed() -> void:
 	save_requested.emit()
 
 
-func _on_shop_pressed() -> void:
+func _on_upgrade_pressed() -> void:
 	AudioManager.play("click")
-	shop_requested.emit()
+	upgrade_requested.emit()
 
 
 func _on_continue_pressed() -> void:

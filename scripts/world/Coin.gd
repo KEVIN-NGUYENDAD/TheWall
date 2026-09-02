@@ -9,6 +9,10 @@ const FACET_COLOR: Color = Color(1.0, 0.95, 0.7, 1.0)
 const GLOW_COLOR: Color = Color(1.0, 0.85, 0.1, 0.95)
 const SPARKLE_COLOR: Color = Color(1.0, 1.0, 0.9, 1.0)
 
+# Coin Magnet upgrade (permanent, SaveManager.data.upgrades.coin_magnet).
+const MAGNET_RADIUS: float = 150.0
+const MAGNET_SPEED: float = 420.0
+
 var is_collected: bool = false
 var _t: float = randf() * TAU
 
@@ -20,7 +24,18 @@ func _ready() -> void:
 func _process(delta: float) -> void:
 	_t += delta
 	rotation += 1.4 * delta
+	_apply_magnet(delta)
 	queue_redraw()
+
+
+func _apply_magnet(delta: float) -> void:
+	if is_collected or not SaveManager.has_upgrade("coin_magnet"):
+		return
+	var player: Node2D = get_tree().get_first_node_in_group("player")
+	if player == null:
+		return
+	if global_position.distance_to(player.global_position) <= MAGNET_RADIUS:
+		global_position = global_position.move_toward(player.global_position, MAGNET_SPEED * delta)
 
 
 func _on_body_entered(body: Node) -> void:

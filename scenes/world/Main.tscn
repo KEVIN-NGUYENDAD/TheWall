@@ -12,7 +12,7 @@
 [ext_resource type="PackedScene" path="res://scenes/world/SparkleField.tscn" id="10"]
 [ext_resource type="PackedScene" path="res://scenes/ui/SeasonBanner.tscn" id="11"]
 [ext_resource type="PackedScene" path="res://scenes/world/ThunderFlash.tscn" id="12"]
-[ext_resource type="PackedScene" path="res://scenes/ui/ShopScreen.tscn" id="13"]
+[ext_resource type="PackedScene" path="res://scenes/ui/UpgradeScreen.tscn" id="13"]
 [ext_resource type="PackedScene" path="res://scenes/ui/RestAreaScreen.tscn" id="14"]
 [ext_resource type="PackedScene" path="res://scenes/ui/GameOverScreen.tscn" id="15"]
 [ext_resource type="Script" path="res://scripts/world/FogLayer.gd" id="16"]
@@ -146,7 +146,7 @@ script = ExtResource("17")
 
 [node name="MemoryOverlay" parent="." instance=ExtResource("7")]
 
-[node name="ShopScreen" parent="." instance=ExtResource("13")]
+[node name="UpgradeScreen" parent="." instance=ExtResource("13")]
 
 [node name="RestAreaScreen" parent="." instance=ExtResource("14")]
 

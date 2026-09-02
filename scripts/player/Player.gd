@@ -22,6 +22,7 @@ const LAND_SQUASH: Vector2 = Vector2(1.35, 0.65)
 const LAND_SPEED_THRESHOLD: float = 500.0
 
 const CHARGE_COLOR: Color = Color(0.95, 0.85, 0.2)
+const DEFAULT_BODY_COLOR: Color = Color(1.0, 0.45, 0.1)
 
 const DASH_SPEED: float = 600.0
 const DASH_DURATION: float = 0.18
@@ -30,14 +31,21 @@ const DOUBLE_TAP_WINDOW: float = 0.3
 const DASH_STRETCH: Vector2 = Vector2(1.5, 0.6)
 
 var ground_friction_mult: float = 1.0
-var jump_boost_mult: float = 1.0
 var level_jump_mult: float = 1.0
+
+# Permanent Upgrades (see UpgradeScreen / SaveManager.data.upgrades). Set
+# once by Main.gd at _ready() and again immediately on purchase mid-run.
+var upgrade_jump_mult: float = 1.0
+var speed_mult: float = 1.0
+var has_double_jump: bool = false
 
 var charge_time: float = 0.0
 var is_charging: bool = false
 var coyote_timer: float = 0.0
 var was_on_floor: bool = false
 var radius: float = 24.0
+var air_jumps_used: int = 0
+var _jump_is_air_jump: bool = false
 
 var dash_timer: float = 0.0
 var dash_cooldown_timer: float = 0.0
@@ -105,7 +113,7 @@ func _handle_movement(delta: float) -> void:
 		return
 	var move_input: float = Input.get_axis("move_left", "move_right")
 	var accel: float = (GROUND_ACCEL * ground_friction_mult) if is_on_floor() else AIR_ACCEL
-	velocity.x = move_toward(velocity.x, move_input * MOVE_SPEED, accel * delta)
+	velocity.x = move_toward(velocity.x, move_input * MOVE_SPEED * speed_mult, accel * delta)
 
 
 func _handle_dash(delta: float) -> void:
@@ -138,13 +146,18 @@ func _start_dash(direction: float) -> void:
 func _handle_charge_and_jump(delta: float) -> void:
 	if is_on_floor():
 		coyote_timer = COYOTE_TIME
+		air_jumps_used = 0
 	else:
 		coyote_timer = max(coyote_timer - delta, 0.0)
 
-	if coyote_timer > 0.0 and Input.is_action_pressed("charge_jump"):
+	var can_ground_jump: bool = coyote_timer > 0.0
+	var can_air_jump: bool = has_double_jump and not can_ground_jump and air_jumps_used < 1
+
+	if (can_ground_jump or can_air_jump) and Input.is_action_pressed("charge_jump"):
 		if not is_charging:
 			is_charging = true
 			charge_time = 0.0
+			_jump_is_air_jump = can_air_jump
 		else:
 			charge_time = min(charge_time + delta, MAX_CHARGE_TIME)
 
@@ -154,7 +167,9 @@ func _handle_charge_and_jump(delta: float) -> void:
 
 func _release_jump() -> void:
 	var charge_ratio: float = charge_time / MAX_CHARGE_TIME
-	velocity.y = -lerp(MIN_JUMP_SPEED, MAX_JUMP_SPEED, charge_ratio) * jump_boost_mult * level_jump_mult
+	velocity.y = -lerp(MIN_JUMP_SPEED, MAX_JUMP_SPEED, charge_ratio) * upgrade_jump_mult * level_jump_mult
+	if _jump_is_air_jump:
+		air_jumps_used += 1
 	is_charging = false
 	charge_time = 0.0
 	coyote_timer = 0.0
@@ -177,5 +192,5 @@ func _update_visual(delta: float) -> void:
 	visual.scale = visual.scale.lerp(Vector2.ONE, delta * SQUASH_LERP_SPEED)
 	visual.is_charging = is_charging
 	visual.charge_ratio = get_charge_ratio()
-	visual.body_color = CHARGE_COLOR if is_charging else SaveManager.get_selected_skin_color()
+	visual.body_color = CHARGE_COLOR if is_charging else DEFAULT_BODY_COLOR
 	visual.queue_redraw()

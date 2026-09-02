@@ -45,9 +45,9 @@ func _on_season_guide_pressed() -> void:
 	get_tree().change_scene_to_file("res://scenes/ui/SeasonGuideScreen.tscn")
 
 
-func _on_skins_pressed() -> void:
+func _on_upgrades_pressed() -> void:
 	AudioManager.play("click")
-	get_tree().change_scene_to_file("res://scenes/ui/SkinsScreen.tscn")
+	get_tree().change_scene_to_file("res://scenes/ui/UpgradeScreen.tscn")
 
 
 func _on_stats_pressed() -> void:
