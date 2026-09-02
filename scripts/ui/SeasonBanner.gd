@@ -3,7 +3,7 @@ extends CanvasLayer
 const SLIDE_TIME: float = 0.5
 const HOLD_TIME: float = 2.0
 
-@onready var panel: Panel = $Panel
+@onready var panel: Control = $Panel
 @onready var name_label: Label = $Panel/VBox/NameLabel
 @onready var title_label: Label = $Panel/VBox/TitleLabel
 

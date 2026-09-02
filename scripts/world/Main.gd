@@ -171,6 +171,22 @@ const PHYSICS_MOVE_SPEED: float = 220.0
 const PHYSICS_AIR_ACCEL: float = 900.0
 const REACHABILITY_SAFETY_MARGIN: float = 0.85
 
+# Final Playability Pass: "not impossible" isn't the same as "obviously safe
+# to a brand-new player." The first 100m — same for every difficulty, since
+# layout must not vary — uses a tighter, more conservative generation window
+# so the next platform is always close, clearly diagonal, and reachable well
+# under max charge: shorter gaps, a smaller horizontal reach, a stricter
+# reachability margin, no fake platforms (a real platform that looks fake
+# would be the definition of a confusing route), and no "short" platforms
+# (harder to spot at a glance). Normal ranges resume past 100m.
+const CLARITY_ZONE_HEIGHT_M: float = 100.0
+const CLARITY_GAP_RANGE: Vector2 = Vector2(150.0, 190.0)
+const CLARITY_MAX_HORIZONTAL_SHIFT: float = 150.0
+const CLARITY_REACHABILITY_SAFETY_MARGIN: float = 0.6
+const CLARITY_WIDTH_WEIGHTS: Dictionary = {
+	"medium": 0.45, "long": 0.4, "xlong": 0.15,
+}
+
 # Lives: 3 per run by default (+1 with the Extra Heart upgrade). Hitting 0
 # shows Game Over (Continue refills to max and resumes at the checkpoint;
 # Play Again refills to max and resets to height 0).
@@ -382,7 +398,9 @@ func _generate_platforms() -> float:
 				_spawn_spike(Vector2(x, y))
 
 		if i < platform_count - 1:
-			var gap_px: float = randf_range(GAP_RANGE.x, GAP_RANGE.y)
+			var in_clarity_zone: bool = height < CLARITY_ZONE_HEIGHT_M
+			var gap_range: Vector2 = CLARITY_GAP_RANGE if in_clarity_zone else GAP_RANGE
+			var gap_px: float = randf_range(gap_range.x, gap_range.y)
 			# Hard ceiling regardless of difficulty — a single jump can only
 			# ever rise so far (see _max_reachable_horizontal), so no gap is
 			# ever allowed past that no matter what the range above rolls.
@@ -391,9 +409,13 @@ func _generate_platforms() -> float:
 
 			# Never place a platform combination that's physically impossible
 			# to cross, regardless of difficulty — cap the horizontal reach to
-			# what THIS gap's vertical rise actually allows, with margin.
-			var max_safe_shift: float = _max_reachable_horizontal(gap_px) * REACHABILITY_SAFETY_MARGIN
-			var max_shift: float = min(MAX_HORIZONTAL_SHIFT, max_safe_shift)
+			# what THIS gap's vertical rise actually allows, with margin. The
+			# clarity zone uses a stricter margin so the jump reads as clearly
+			# safe, not just technically possible at max charge.
+			var margin: float = CLARITY_REACHABILITY_SAFETY_MARGIN if in_clarity_zone else REACHABILITY_SAFETY_MARGIN
+			var max_safe_shift: float = _max_reachable_horizontal(gap_px) * margin
+			var shift_budget: float = CLARITY_MAX_HORIZONTAL_SHIFT if in_clarity_zone else MAX_HORIZONTAL_SHIFT
+			var max_shift: float = min(shift_budget, max_safe_shift)
 			x = clamp(x + randf_range(-max_shift, max_shift), EDGE_MARGIN, VIEWPORT_WIDTH - EDGE_MARGIN)
 
 	return y
@@ -416,9 +438,11 @@ func _max_reachable_horizontal(vertical_gap: float) -> float:
 # Picks a random platform width in pixels from one of the 4 categories
 # (short/medium/long/xlong) — same weighted mix for every difficulty, so the
 # resulting mix of very different lengths side by side is what breaks the
-# "uniform staircase" look, not a per-difficulty skew.
-func _pick_platform_width() -> float:
-	var weights: Dictionary = PLATFORM_WIDTH_WEIGHTS
+# "uniform staircase" look, not a per-difficulty skew. In the clarity zone
+# (first 100m) "short" is excluded so every platform reads as an obvious,
+# easy-to-spot target.
+func _pick_platform_width(in_clarity_zone: bool = false) -> float:
+	var weights: Dictionary = CLARITY_WIDTH_WEIGHTS if in_clarity_zone else PLATFORM_WIDTH_WEIGHTS
 	var total: float = 0.0
 	for w in weights.values():
 		total += w
@@ -448,7 +472,10 @@ func _spawn_platform_variant(i: int, x: float, y: float, height: float) -> Dicti
 	if i > 0 and height >= SAFE_ZONE_HEIGHT_M:
 		var level_idx: int = _get_level_index(height)
 		var trap_mult: float = DIFFICULTY_TRAP_MULT.get(difficulty, 1.0)
-		var fake_chance: float = FAKE_PLATFORM_CHANCE
+		# No fake platforms in the clarity zone — a real platform that looks
+		# fake (or vice versa) is exactly the "hidden platform" confusion the
+		# first 100m must never create.
+		var fake_chance: float = 0.0 if height < CLARITY_ZONE_HEIGHT_M else FAKE_PLATFORM_CHANCE
 		var moving_chance: float = clamp(LEVEL_MOVING_CHANCE[level_idx], 0.0, 0.9)
 		var collapsing_chance: float = clamp(LEVEL_COLLAPSING_CHANCE[level_idx], 0.0, 0.9)
 		var trap_chance: float = clamp(LEVEL_TRAP_CHANCE[level_idx] * trap_mult, 0.0, 0.9)
@@ -470,7 +497,7 @@ func _spawn_platform_variant(i: int, x: float, y: float, height: float) -> Dicti
 	var platform: Node = scene.instantiate()
 	platform.position = Vector2(x, y)
 	if i > 0:
-		platform.scale.x *= _pick_platform_width() / BASE_PLATFORM_WIDTH
+		platform.scale.x *= _pick_platform_width(height < CLARITY_ZONE_HEIGHT_M) / BASE_PLATFORM_WIDTH
 	add_child(platform)
 	platform.modulate = SEASON_PLATFORM_MODULATE[_get_level_index(height)]
 
