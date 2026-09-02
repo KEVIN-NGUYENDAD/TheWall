@@ -1,4 +1,4 @@
-[gd_scene load_steps=14 format=3]
+[gd_scene load_steps=15 format=3]
 
 [ext_resource type="Script" path="res://scripts/world/Main.gd" id="1"]
 [ext_resource type="PackedScene" path="res://scenes/player/Player.tscn" id="2"]
@@ -14,6 +14,7 @@
 [ext_resource type="PackedScene" path="res://scenes/world/ThunderFlash.tscn" id="12"]
 [ext_resource type="PackedScene" path="res://scenes/ui/ShopScreen.tscn" id="13"]
 [ext_resource type="PackedScene" path="res://scenes/ui/RestAreaScreen.tscn" id="14"]
+[ext_resource type="PackedScene" path="res://scenes/ui/GameOverScreen.tscn" id="15"]
 
 [node name="Main" type="Node2D"]
 script = ExtResource("1")
@@ -118,3 +119,5 @@ polygon = PackedVector2Array(380, 300, 420, 282, 465, 296, 480, 314, 445, 328, 3
 [node name="ShopScreen" parent="." instance=ExtResource("13")]
 
 [node name="RestAreaScreen" parent="." instance=ExtResource("14")]
+
+[node name="GameOverScreen" parent="." instance=ExtResource("15")]

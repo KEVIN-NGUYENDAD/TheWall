@@ -48,46 +48,57 @@ const SPAWN_PLATFORM_SCALE: Vector2 = Vector2(2.0, 1.0)
 
 const FAKE_PLATFORM_CHANCE: float = 0.05
 
-# Level system: Level N = N-th band, each following the Season difficulty
-# philosophy below rather than a flat increasing curve — pretty weather
-# isn't always easy. Bands match the Season bands (SEASON_NAMES) exactly.
-# Spring is easiest; Summer spikes harder than Winter/Autumn's "medium"
-# plateau; Storm is the hardest. Medium's multiplier below stays at 1.0
-# relative to this shared baseline; Easy/Hard scale it down/up further.
+# Level system: Level N = N-th band, bands match the Season bands
+# (SEASON_NAMES) exactly. Balance Rework: beauty no longer implies easy or
+# hard by itself — difficulty is set purely by the hazard curve below, which
+# now climbs in the same order as the seasons: Winter (easiest) -> Storm
+# (still easy — mostly for exploring the new weather) -> Spring (medium) ->
+# Summer (harder) -> Autumn (hardest). Medium's multiplier below stays at
+# 1.0 as the balanced baseline; Easy/Hard scale it down/up from there.
 const LEVEL_HEIGHTS: Array = [0.0, 100.0, 250.0, 450.0, 700.0]
-const LEVEL_MOVING_CHANCE: Array = [0.04, 0.10, 0.08, 0.09, 0.15]
-const LEVEL_COLLAPSING_CHANCE: Array = [0.03, 0.085, 0.06, 0.07, 0.13]
-const LEVEL_TRAP_CHANCE: Array = [0.0, 0.03, 0.02, 0.025, 0.055]
+const LEVEL_MOVING_CHANCE: Array = [0.04, 0.06, 0.09, 0.12, 0.16]
+const LEVEL_COLLAPSING_CHANCE: Array = [0.03, 0.05, 0.07, 0.10, 0.14]
+const LEVEL_TRAP_CHANCE: Array = [0.0, 0.015, 0.03, 0.045, 0.065]
 
 # Platform colors are fixed per TYPE (not per zone) so players can recognize
 # hazards at a glance: green=normal, blue=moving, yellow=collapsing,
 # purple=fake, red=trap. Season only applies a light modulate tint on top.
-# Reordered so players see snow sooner: Spring -> Summer -> Winter -> Autumn
-# -> Storm (was Spring/Summer/Autumn/Winter/Storm).
-const SEASON_NAMES: Array = ["SPRING", "SUMMER", "WINTER", "AUTUMN", "STORM"]
-const SEASON_FRICTION_MULT: Array = [1.0, 1.0, 0.7, 1.0, 0.35]
+# Reordered again (Balance Rework) so players see snow AND storm weather
+# right from the start: Winter -> Storm -> Spring -> Summer -> Autumn.
+const SEASON_NAMES: Array = ["WINTER", "STORM", "SPRING", "SUMMER", "AUTUMN"]
+const STORM_LEVEL_IDX: int = 1
+# Winter ice and Storm rain both trim grip a little; Autumn's leaves are the
+# slickest of all, on top of already being the hardest hazard curve.
+const SEASON_FRICTION_MULT: Array = [0.7, 0.8, 1.0, 1.0, 0.6]
 const SEASON_PLATFORM_MODULATE: Array = [
-	Color(1, 1, 1), Color(1, 1, 1),
-	Color(0.82, 0.92, 1.0), Color(1.0, 0.9, 0.75), Color(0.75, 0.8, 0.88),
+	Color(0.82, 0.92, 1.0), Color(0.75, 0.8, 0.88),
+	Color(1.0, 0.97, 1.0), Color(1.0, 1.0, 0.9), Color(1.0, 0.85, 0.55),
 ]
 const WEATHER_INTERVAL: Dictionary = {
-	0: 4.8, 1: 0.0, 2: 0.9, 3: 1.0, 4: 0.35,
+	0: 0.9, 1: 0.35, 2: 4.8, 3: 0.0, 4: 1.0,
 }
 const THUNDER_INTERVAL_MIN: float = 6.0
 const THUNDER_INTERVAL_MAX: float = 14.0
 const FLOWER_CHANCE: float = 0.2
 
 # Difficulty modes: multipliers applied on top of the base level curve.
-# Medium/Hard stay put (Medium == previous Easy, Hard == previous Medium,
-# per the standing instruction that those two are already right) — only
-# Easy was cut another 50% (traps/eagles/gaps) for even safer jumps and
-# more recovery room.
-const DIFFICULTY_TRAP_MULT: Dictionary = {"EASY": 0.0625, "MEDIUM": 0.5, "HARD": 1.0}
-const DIFFICULTY_HAZARD_MULT: Dictionary = {"EASY": 0.0625, "MEDIUM": 0.5, "HARD": 1.0}
-const DIFFICULTY_GAP_MULT: Dictionary = {"EASY": 0.5, "MEDIUM": 0.8, "HARD": 1.0}
+# Balance Rework: rebuilt from scratch against Medium as the balanced 1.0
+# baseline (previous passes tied Medium/Hard to older, softer tiers — this
+# pass replaces that relationship with an explicit, clearly-felt spread).
+# Easy: -70% traps/eagles, gentler hazards overall, shorter gaps, wider
+# platforms, more frequent bonus birds. Hard: noticeably more traps/eagles,
+# farther gaps, narrower platforms.
+const DIFFICULTY_TRAP_MULT: Dictionary = {"EASY": 0.3, "MEDIUM": 1.0, "HARD": 1.6}
+const DIFFICULTY_HAZARD_MULT: Dictionary = {"EASY": 0.4, "MEDIUM": 1.0, "HARD": 1.5}
+const DIFFICULTY_GAP_MULT: Dictionary = {"EASY": 0.6, "MEDIUM": 0.85, "HARD": 1.2}
 const DIFFICULTY_BIRD_INTERVAL_MULT: Dictionary = {"EASY": 0.6, "MEDIUM": 1.0, "HARD": 1.6}
-const DIFFICULTY_EAGLE_CHANCE_MULT: Dictionary = {"EASY": 0.0625, "MEDIUM": 0.5, "HARD": 1.0}
+const DIFFICULTY_EAGLE_CHANCE_MULT: Dictionary = {"EASY": 0.3, "MEDIUM": 1.0, "HARD": 1.6}
+const DIFFICULTY_PLATFORM_SCALE: Dictionary = {"EASY": 1.3, "MEDIUM": 1.0, "HARD": 0.75}
 const EAGLE_BASE_CHANCE: float = 0.25
+
+# Lives: 3 per run. Hitting 0 shows Game Over (Continue refills to 3 and
+# resumes at the checkpoint; Play Again refills to 3 and resets to height 0).
+const MAX_LIVES: int = 3
 
 # Coin-reward power-ups (Shop).
 const BUFF_DURATION: float = 30.0
@@ -152,6 +163,7 @@ const CLOUD_DRIFT_RANGE: float = 620.0
 @onready var thunder_flash = $ThunderFlash
 @onready var shop_screen = $ShopScreen
 @onready var rest_area_screen = $RestAreaScreen
+@onready var game_over_screen = $GameOverScreen
 
 @onready var mountains: Array = [
 	$ParallaxBackground/Far/Mountain1, $ParallaxBackground/Far/Mountain2,
@@ -180,6 +192,7 @@ var cloud_drift_t: float = 0.0
 var spawn_protection_timer: float = 0.0
 var current_level_idx: int = -1
 var difficulty: String = "MEDIUM"
+var lives_remaining: int = MAX_LIVES
 
 var ice_grip_active: bool = false
 var weather_blessing_active: bool = false
@@ -208,6 +221,9 @@ func _ready() -> void:
 	rest_area_screen.save_requested.connect(_on_save_position_requested)
 	rest_area_screen.shop_requested.connect(_on_shop_requested)
 	rest_area_screen.continue_requested.connect(_on_rest_area_continue)
+	game_over_screen.continue_requested.connect(_on_game_over_continue_requested)
+	game_over_screen.play_again_requested.connect(_on_game_over_play_again_requested)
+	game_over_screen.menu_requested.connect(_on_menu_requested)
 
 	var top_y: float = _generate_platforms()
 	player.global_position = spawn_position
@@ -220,6 +236,7 @@ func _ready() -> void:
 	_spawn_recorded_death_markers()
 	_setup_ambience_timers()
 	_apply_auto_resume()
+	hud.set_lives(lives_remaining, MAX_LIVES)
 
 	spawn_protection_timer = SPAWN_PROTECTION_TIME
 	MusicManager.start()
@@ -290,6 +307,8 @@ func _spawn_platform_variant(i: int, x: float, y: float, height: float) -> Dicti
 
 	var platform: Node = scene.instantiate()
 	platform.position = Vector2(x, y)
+	if i > 0:
+		platform.scale.x *= DIFFICULTY_PLATFORM_SCALE.get(difficulty, 1.0)
 	add_child(platform)
 	platform.modulate = SEASON_PLATFORM_MODULATE[_get_level_index(height)]
 
@@ -364,7 +383,7 @@ func _check_season_transition(height: float) -> void:
 	var interval: float = WEATHER_INTERVAL.get(level_idx, 0.0)
 	if interval > 0.0 and not weather_blessing_active:
 		_restart_timer(weather_timer, interval, interval * 1.6)
-	if level_idx == 4 and not weather_blessing_active:
+	if level_idx == STORM_LEVEL_IDX and not weather_blessing_active:
 		_restart_timer(thunder_timer, THUNDER_INTERVAL_MIN, THUNDER_INTERVAL_MAX)
 
 	if leveled_up:
@@ -492,6 +511,9 @@ func _apply_auto_resume() -> void:
 	player.global_position = pos
 	current_checkpoint_position = pos
 	current_checkpoint_height = session.height
+	lives_remaining = int(session.get("lives", MAX_LIVES))
+	if lives_remaining <= 0:
+		lives_remaining = MAX_LIVES
 
 	if session.jump_boost_remaining > 0.0:
 		player.jump_boost_mult = JUMP_BOOST_MULT
@@ -730,28 +752,28 @@ func _spawn_weather_particle(level_idx: int) -> void:
 	var scene: PackedScene = null
 	match level_idx:
 		0:
-			scene = BUTTERFLY_SCENE
-		2:
 			scene = SNOWFLAKE_SCENE
-		3:
-			scene = LEAF_SCENE
-		4:
+		1:
 			scene = RAINDROP_SCENE
+		2:
+			scene = BUTTERFLY_SCENE
+		4:
+			scene = LEAF_SCENE
 	if scene == null:
 		return
 	var particle: Node2D = scene.instantiate()
-	var top: bool = level_idx != 0
+	var top: bool = level_idx != 2
 	particle.position = Vector2(
 		randf_range(center.x - 260.0, center.x + 260.0),
 		center.y - 500.0 if top else center.y + randf_range(-150.0, 150.0)
 	)
-	if level_idx == 0:
+	if level_idx == 2:
 		particle.direction = 1.0 if randf() < 0.5 else -1.0
 	add_child(particle)
 
 
 func _on_thunder_timer() -> void:
-	if not is_dead and current_level_idx == 4 and not weather_blessing_active:
+	if not is_dead and current_level_idx == STORM_LEVEL_IDX and not weather_blessing_active:
 		thunder_flash.flash()
 		_restart_timer(thunder_timer, THUNDER_INTERVAL_MIN, THUNDER_INTERVAL_MAX)
 
@@ -769,9 +791,10 @@ func _process(delta: float) -> void:
 		spawn_protection_timer = max(spawn_protection_timer - delta, 0.0)
 
 	var height: float = max(0.0, start_y - player.global_position.y) / PIXELS_PER_METER + bonus_height_m
-	hud.set_height(int(height), SaveManager.data.best_height)
+	hud.set_height(int(height), SaveManager.data.best_height, max(current_level_idx, 0) + 1)
 	hud.set_charge(player.get_charge_ratio())
 	hud.set_coins(SaveManager.data.total_coins)
+	hud.set_lives(lives_remaining, MAX_LIVES)
 	SaveManager.update_best_height(height)
 	_check_memories(height)
 	_check_zone_transition(height)
@@ -807,6 +830,7 @@ func _update_session_snapshot(height: float) -> void:
 		"jump_boost_remaining": jump_boost_timer.time_left,
 		"ice_grip_remaining": ice_grip_timer.time_left,
 		"weather_blessing_remaining": weather_blessing_timer.time_left,
+		"lives": lives_remaining,
 	})
 
 
@@ -902,8 +926,14 @@ func _die(height_reached: float) -> void:
 	else:
 		AudioManager.play("death")
 
+	lives_remaining = max(lives_remaining - 1, 0)
+	hud.set_lives(lives_remaining, MAX_LIVES)
 	get_tree().paused = true
-	death_screen.show_death(int(height_reached), SaveManager.data.best_height, SaveManager.data.total_coins, int(lost_meters), is_near_miss)
+
+	if lives_remaining > 0:
+		death_screen.show_death(int(height_reached), SaveManager.data.best_height, SaveManager.data.total_coins, int(lost_meters), is_near_miss, lives_remaining)
+	else:
+		game_over_screen.show_game_over(int(height_reached), SaveManager.data.best_height, SaveManager.data.total_coins)
 
 
 func _on_respawn_requested() -> void:
@@ -913,6 +943,22 @@ func _on_respawn_requested() -> void:
 	player.velocity = Vector2.ZERO
 	player.reset_charge()
 	spawn_protection_timer = SPAWN_PROTECTION_TIME
+
+
+# Game Over (0 lives): Continue refills lives and resumes at the last
+# checkpoint; Play Again refills lives and restarts the climb from 0m.
+func _on_game_over_continue_requested() -> void:
+	lives_remaining = MAX_LIVES
+	hud.set_lives(lives_remaining, MAX_LIVES)
+	_on_respawn_requested()
+
+
+func _on_game_over_play_again_requested() -> void:
+	lives_remaining = MAX_LIVES
+	hud.set_lives(lives_remaining, MAX_LIVES)
+	current_checkpoint_position = spawn_position
+	current_checkpoint_height = 0.0
+	_on_respawn_requested()
 
 
 func _on_save_position_requested() -> void:

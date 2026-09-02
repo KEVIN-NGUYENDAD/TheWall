@@ -64,6 +64,7 @@ func _default_data() -> Dictionary:
 			"jump_boost_remaining": 0.0,
 			"ice_grip_remaining": 0.0,
 			"weather_blessing_remaining": 0.0,
+			"lives": 3,
 		},
 		"unlocked_skins": ["default"],
 		"selected_skin": "default",

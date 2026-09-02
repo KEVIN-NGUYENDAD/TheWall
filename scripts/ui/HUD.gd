@@ -19,6 +19,7 @@ const SEASON_DISPLAY: Dictionary = {
 @onready var best_label: Label = $BestLabel
 @onready var coin_label: Label = $CoinLabel
 @onready var season_label: Label = $SeasonLabel
+@onready var lives_label: Label = $LivesLabel
 @onready var charge_label: Label = $ChargeLabel
 @onready var charge_bar_fill: ColorRect = $ChargeBarBG/ChargeBarFill
 @onready var toast: Panel = $Toast
@@ -36,8 +37,8 @@ func hide_tutorial_hint() -> void:
 	charge_label.visible = false
 
 
-func set_height(current: int, best: int) -> void:
-	height_label.text = "Height: %d m" % current
+func set_height(current: int, best: int, level: int = 1) -> void:
+	height_label.text = "Height: %d m   Lv.%d" % [current, level]
 	best_label.text = "Best: %d m" % best
 
 
@@ -47,6 +48,10 @@ func set_coins(total: int) -> void:
 
 func set_season(season_name: String) -> void:
 	season_label.text = SEASON_DISPLAY.get(season_name, season_name)
+
+
+func set_lives(current: int, max_lives: int) -> void:
+	lives_label.text = "❤".repeat(max(current, 0)) + "🖤".repeat(max(max_lives - current, 0))
 
 
 func set_charge(ratio: float) -> void:

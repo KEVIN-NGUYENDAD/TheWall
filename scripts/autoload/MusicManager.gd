@@ -16,15 +16,15 @@ const SILENT_DB: float = -80.0
 
 # Only 3 real tracks exist; adjacent seasons share one so the whole climb
 # still moves through a clear 3-act arc (bright -> energetic -> epic). Index
-# here is the level/season index — seasons were reordered in Main.gd
-# (Spring/Summer/Winter/Autumn/Storm) but which physical track plays at
-# which index is unchanged.
+# here is the level/season index — seasons were reordered again in Main.gd
+# for the Balance Rework Pass (Winter/Storm/Spring/Summer/Autumn) but which
+# physical track plays at which index is unchanged.
 const SEASON_TRACK_PATHS: Array = [
-	"res://audio/music/the_mountain-happy-happy-music-496549.mp3", # Spring
-	"res://audio/music/the_mountain-happy-happy-music-496549.mp3", # Summer
-	"res://audio/music/jorisvermeer-happy-adventure-quest-572050.mp3", # Winter
+	"res://audio/music/the_mountain-happy-happy-music-496549.mp3", # Winter
+	"res://audio/music/the_mountain-happy-happy-music-496549.mp3", # Storm
+	"res://audio/music/jorisvermeer-happy-adventure-quest-572050.mp3", # Spring
+	"res://audio/music/the_mountain-fantasy-quest-184140.mp3", # Summer
 	"res://audio/music/the_mountain-fantasy-quest-184140.mp3", # Autumn
-	"res://audio/music/the_mountain-fantasy-quest-184140.mp3", # Storm
 ]
 const MENU_TRACK_PATH: String = "res://audio/music/velariomusic-happy-vibes-591803.mp3"
 const MENU_VOLUME_DB: float = -40.0

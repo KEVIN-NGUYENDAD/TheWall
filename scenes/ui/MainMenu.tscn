@@ -50,7 +50,7 @@ custom_minimum_size = Vector2(0, 24)
 [node name="PlayButton" type="Button" parent="CenterContainer/VBoxContainer"]
 custom_minimum_size = Vector2(260, 64)
 theme_override_font_sizes/font_size = 26
-text = "Play"
+text = "New Game"
 
 [node name="ContinueLastSessionButton" type="Button" parent="CenterContainer/VBoxContainer"]
 visible = false
@@ -118,9 +118,73 @@ horizontal_alignment = 1
 custom_minimum_size = Vector2(0, 48)
 text = "Confirm"
 
+[node name="DifficultyPrompt" type="Control" parent="."]
+visible = false
+anchor_left = 0.0
+anchor_top = 0.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Dim" type="ColorRect" parent="DifficultyPrompt"]
+anchor_left = 0.0
+anchor_top = 0.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0, 0, 0, 0.45)
+
+[node name="Panel" type="Panel" parent="DifficultyPrompt"]
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -160.0
+offset_top = -170.0
+offset_right = 160.0
+offset_bottom = 170.0
+
+[node name="VBox" type="VBoxContainer" parent="DifficultyPrompt/Panel"]
+anchor_left = 0.0
+anchor_top = 0.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 20.0
+offset_top = 20.0
+offset_right = -20.0
+offset_bottom = -20.0
+alignment = 1
+theme_override_constants/separation = 12
+
+[node name="PromptLabel" type="Label" parent="DifficultyPrompt/Panel/VBox"]
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 22
+text = "Choose Difficulty"
+
+[node name="EasyButton" type="Button" parent="DifficultyPrompt/Panel/VBox"]
+custom_minimum_size = Vector2(0, 52)
+theme_override_font_sizes/font_size = 20
+text = "EASY"
+
+[node name="MediumButton" type="Button" parent="DifficultyPrompt/Panel/VBox"]
+custom_minimum_size = Vector2(0, 52)
+theme_override_font_sizes/font_size = 20
+text = "MEDIUM"
+
+[node name="HardButton" type="Button" parent="DifficultyPrompt/Panel/VBox"]
+custom_minimum_size = Vector2(0, 52)
+theme_override_font_sizes/font_size = 20
+text = "HARD"
+
+[node name="CancelButton" type="Button" parent="DifficultyPrompt/Panel/VBox"]
+custom_minimum_size = Vector2(0, 44)
+text = "Back"
+
 [connection signal="pressed" from="CenterContainer/VBoxContainer/PlayButton" to="." method="_on_play_pressed"]
 [connection signal="pressed" from="CenterContainer/VBoxContainer/ContinueLastSessionButton" to="." method="_on_continue_last_session_pressed"]
 [connection signal="pressed" from="CenterContainer/VBoxContainer/ContinueButton" to="." method="_on_continue_pressed"]
 [connection signal="pressed" from="CenterContainer/VBoxContainer/SettingsButton" to="." method="_on_settings_pressed"]
 [connection signal="pressed" from="NamePrompt/Panel/VBox/ConfirmButton" to="." method="_on_confirm_name_pressed"]
 [connection signal="text_submitted" from="NamePrompt/Panel/VBox/NameEdit" to="." method="_on_name_submitted"]
+[connection signal="pressed" from="DifficultyPrompt/Panel/VBox/EasyButton" to="." method="_on_new_game_easy_pressed"]
+[connection signal="pressed" from="DifficultyPrompt/Panel/VBox/MediumButton" to="." method="_on_new_game_medium_pressed"]
+[connection signal="pressed" from="DifficultyPrompt/Panel/VBox/HardButton" to="." method="_on_new_game_hard_pressed"]
+[connection signal="pressed" from="DifficultyPrompt/Panel/VBox/CancelButton" to="." method="_on_difficulty_cancel_pressed"]

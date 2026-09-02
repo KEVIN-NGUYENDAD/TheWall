@@ -1,11 +1,11 @@
 extends Control
 
 const SEASONS: Array = [
-	{"name": "🌸 SPRING (0-100m)", "points": ["Beautiful", "Easiest"]},
-	{"name": "☀ SUMMER (100-250m)", "points": ["Sunny", "More challenging"]},
-	{"name": "❄ WINTER (250-450m)", "points": ["Snow", "Slippery — but beautiful"]},
-	{"name": "🍂 AUTUMN (450-700m)", "points": ["Golden leaves", "Balanced challenge"]},
-	{"name": "🌧 STORM (700m+)", "points": ["Rain", "Wind", "Hardest"]},
+	{"name": "❄ WINTER (0-100m)", "points": ["Snow falls right away", "Easiest — dive in and enjoy it"]},
+	{"name": "🌧 STORM (100-250m)", "points": ["Rain and thunder", "Still easy — mostly for exploring"]},
+	{"name": "🌸 SPRING (250-450m)", "points": ["Bright and fresh", "Medium challenge"]},
+	{"name": "☀ SUMMER (450-700m)", "points": ["Clear sunny skies", "Harder — don't be fooled by the view"]},
+	{"name": "🍂 AUTUMN (700m+)", "points": ["Golden leaves", "Hardest — slick footing"]},
 ]
 
 @onready var list: VBoxContainer = $ScrollContainer/VBoxContainer

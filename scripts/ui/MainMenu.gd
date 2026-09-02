@@ -6,6 +6,7 @@ extends Control
 @onready var menu_box: VBoxContainer = $CenterContainer/VBoxContainer
 @onready var name_prompt: Control = $NamePrompt
 @onready var name_edit: LineEdit = $NamePrompt/Panel/VBox/NameEdit
+@onready var difficulty_prompt: Control = $DifficultyPrompt
 
 
 func _ready() -> void:
@@ -44,8 +45,31 @@ func _confirm_name(entered_text: String) -> void:
 
 func _on_play_pressed() -> void:
 	AudioManager.play("click")
+	difficulty_prompt.visible = true
+
+
+func _on_new_game_easy_pressed() -> void:
+	_start_new_game("EASY")
+
+
+func _on_new_game_medium_pressed() -> void:
+	_start_new_game("MEDIUM")
+
+
+func _on_new_game_hard_pressed() -> void:
+	_start_new_game("HARD")
+
+
+func _start_new_game(chosen_difficulty: String) -> void:
+	AudioManager.play("click")
+	SaveManager.set_difficulty(chosen_difficulty)
 	SaveManager.pending_continue = false
 	get_tree().change_scene_to_file("res://scenes/world/Main.tscn")
+
+
+func _on_difficulty_cancel_pressed() -> void:
+	AudioManager.play("click")
+	difficulty_prompt.visible = false
 
 
 func _on_continue_pressed() -> void:

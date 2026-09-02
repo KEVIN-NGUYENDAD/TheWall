@@ -1,8 +1,8 @@
 [gd_scene load_steps=2 format=3]
 
-[ext_resource type="Script" path="res://scripts/ui/DeathScreen.gd" id="1"]
+[ext_resource type="Script" path="res://scripts/ui/GameOverScreen.gd" id="1"]
 
-[node name="DeathScreen" type="CanvasLayer"]
+[node name="GameOverScreen" type="CanvasLayer"]
 visible = false
 process_mode = 3
 script = ExtResource("1")
@@ -12,16 +12,7 @@ anchor_left = 0.0
 anchor_top = 0.0
 anchor_right = 1.0
 anchor_bottom = 1.0
-color = Color(0, 0, 0, 0.6)
-
-[node name="NearMissFlash" type="ColorRect" parent="."]
-visible = false
-mouse_filter = 2
-anchor_left = 0.0
-anchor_top = 0.0
-anchor_right = 1.0
-anchor_bottom = 1.0
-color = Color(0.95, 0.8, 0.2, 0.55)
+color = Color(0, 0, 0, 0.7)
 
 [node name="Panel" type="Panel" parent="."]
 anchor_left = 0.5
@@ -29,9 +20,9 @@ anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
 offset_left = -180.0
-offset_top = -245.0
+offset_top = -230.0
 offset_right = 180.0
-offset_bottom = 245.0
+offset_bottom = 230.0
 
 [node name="VBoxContainer" type="VBoxContainer" parent="Panel"]
 anchor_left = 0.0
@@ -47,9 +38,9 @@ theme_override_constants/separation = 14
 
 [node name="TitleLabel" type="Label" parent="Panel/VBoxContainer"]
 horizontal_alignment = 1
-theme_override_font_sizes/font_size = 32
-theme_override_colors/font_color = Color(0.95, 0.3, 0.25, 1)
-text = "You Fell!"
+theme_override_font_sizes/font_size = 34
+theme_override_colors/font_color = Color(0.95, 0.2, 0.2, 1)
+text = "GAME OVER"
 
 [node name="HeightLabel" type="Label" parent="Panel/VBoxContainer"]
 horizontal_alignment = 1
@@ -64,36 +55,24 @@ text = "Best: 0 m"
 horizontal_alignment = 1
 text = "Coins: 0"
 
-[node name="LivesLabel" type="Label" parent="Panel/VBoxContainer"]
-horizontal_alignment = 1
-theme_override_colors/font_color = Color(0.95, 0.25, 0.3, 1)
-text = "Lives left: 0"
-
-[node name="LostLabel" type="Label" parent="Panel/VBoxContainer"]
-horizontal_alignment = 1
-theme_override_colors/font_color = Color(0.9, 0.4, 0.35, 1)
-text = "Lost: 0 m"
-
-[node name="NearMissLabel" type="Label" parent="Panel/VBoxContainer"]
-visible = false
-horizontal_alignment = 1
-theme_override_font_sizes/font_size = 22
-theme_override_colors/font_color = Color(0.95, 0.8, 0.2, 1)
-text = "So close! You were within 5m of a checkpoint."
-autowrap_mode = 2
-
 [node name="Spacer" type="Control" parent="Panel/VBoxContainer"]
 custom_minimum_size = Vector2(0, 10)
 
-[node name="RespawnButton" type="Button" parent="Panel/VBoxContainer"]
+[node name="ContinueButton" type="Button" parent="Panel/VBoxContainer"]
 custom_minimum_size = Vector2(0, 60)
 theme_override_font_sizes/font_size = 22
-text = "Respawn at Checkpoint"
+text = "Continue"
+
+[node name="PlayAgainButton" type="Button" parent="Panel/VBoxContainer"]
+custom_minimum_size = Vector2(0, 56)
+theme_override_font_sizes/font_size = 20
+text = "Play Again"
 
 [node name="MenuButton" type="Button" parent="Panel/VBoxContainer"]
 custom_minimum_size = Vector2(0, 56)
 theme_override_font_sizes/font_size = 20
 text = "Main Menu"
 
-[connection signal="pressed" from="Panel/VBoxContainer/RespawnButton" to="." method="_on_respawn_pressed"]
+[connection signal="pressed" from="Panel/VBoxContainer/ContinueButton" to="." method="_on_continue_pressed"]
+[connection signal="pressed" from="Panel/VBoxContainer/PlayAgainButton" to="." method="_on_play_again_pressed"]
 [connection signal="pressed" from="Panel/VBoxContainer/MenuButton" to="." method="_on_menu_pressed"]
