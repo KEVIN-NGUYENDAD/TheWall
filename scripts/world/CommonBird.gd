@@ -5,8 +5,8 @@ signal collected
 const SPEED: float = 85.0
 const BOB_AMOUNT: float = 12.0
 const LIFETIME: float = 14.0
-const BODY_COLOR: Color = Color(0.25, 0.55, 0.95, 1.0)
-const BELLY_COLOR: Color = Color(1.0, 0.7, 0.25, 1.0)
+const BODY_COLOR: Color = Color(1.0, 0.55, 0.1, 1.0)
+const BELLY_COLOR: Color = Color(1.0, 0.95, 0.6, 1.0)
 
 var direction: float = 1.0
 

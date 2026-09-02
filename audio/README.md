@@ -53,7 +53,7 @@ overpowering other feedback (checkpoints, coins, eagle warnings).
 | `landing.ogg` | Hard landing |
 | `memory.ogg` | Memory reveal (100m/300m/700m/1500m) |
 | `nearmiss.ogg` | Dying within 5m of a checkpoint |
-| `bird.ogg` | Collecting the rare white bird, discovering a bird nest, and collecting a common bird (all three share this file) — real chirp/tweet, never synthesized |
+| `bird_chirp.ogg` | Collecting the rare white bird, discovering a bird nest, and collecting a common bird (all three share this file) — real chirp/tweet, never synthesized |
 | `eagle.ogg` | Eagle telegraph/strike (steals 3 coins, no death) — real eagle screech, never synthesized |
 | `area_discovery.ogg` | Crossing into a new zone |
 | `click.ogg` | UI button press |

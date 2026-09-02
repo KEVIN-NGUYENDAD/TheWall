@@ -8,10 +8,10 @@ signal telegraph_started
 const TELEGRAPH_TIME: float = 0.7
 const DIVE_SPEED: float = 340.0
 const LIFETIME: float = 4.0
-const COLOR: Color = Color(0.95, 0.3, 0.15, 1.0)
-const ACCENT_COLOR: Color = Color(1.0, 0.75, 0.15, 1.0)
+const COLOR: Color = Color(0.35, 0.06, 0.05, 1.0)
+const ACCENT_COLOR: Color = Color(0.55, 0.28, 0.04, 1.0)
 const WARNING_COLOR: Color = Color(1.0, 0.55, 0.1, 1.0)
-const EYE_COLOR: Color = Color(1.0, 1.0, 0.3, 1.0)
+const EYE_COLOR: Color = Color(1.0, 0.95, 0.15, 1.0)
 
 var dive_velocity: Vector2 = Vector2.ZERO
 

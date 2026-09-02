@@ -7,7 +7,7 @@ signal coins_changed(total: int)
 const SAVE_PATH: String = "user://savegame.json"
 
 const SKINS: Dictionary = {
-	"default": {"name": "Default", "color": Color(0.2, 0.6, 0.95), "cost": 0},
+	"default": {"name": "Default", "color": Color(1.0, 0.45, 0.1), "cost": 0},
 	"red": {"name": "Red", "color": Color(0.9, 0.15, 0.15), "cost": 25},
 	"yellow": {"name": "Yellow", "color": Color(0.95, 0.85, 0.2), "cost": 50},
 	"purple": {"name": "Purple", "color": Color(0.6, 0.3, 0.9), "cost": 100},

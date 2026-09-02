@@ -30,7 +30,7 @@ progress. The menu track plays independently on its own player.
 | `checkpoint.ogg` | Checkpoint activation |
 | `death.ogg` | Falling / dying |
 | `memory.ogg` | Memory reveal (100m/300m/700m/1500m) |
-| `bird.ogg` | Bird encounter (rare white bird pickup and nest discovery) |
+| `bird_chirp.ogg` | Bird encounter (rare white bird pickup and nest discovery) |
 | `nearmiss.ogg` | Dying within 5m of a checkpoint |
 
 ## Format

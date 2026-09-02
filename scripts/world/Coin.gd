@@ -3,11 +3,11 @@ extends Area2D
 signal collected
 
 const RADIUS: float = 12.0
-const GEM_COLOR: Color = Color(1.0, 0.82, 0.15, 1.0)
-const GEM_DARK: Color = Color(0.75, 0.55, 0.05, 1.0)
-const FACET_COLOR: Color = Color(1.0, 0.95, 0.75, 0.9)
-const GLOW_COLOR: Color = Color(1.0, 0.85, 0.3, 0.55)
-const SPARKLE_COLOR: Color = Color(1.0, 1.0, 0.9, 1.0)
+const GEM_COLOR: Color = Color(1.0, 0.9, 0.05, 1.0)
+const GEM_DARK: Color = Color(0.8, 0.6, 0.0, 1.0)
+const FACET_COLOR: Color = Color(1.0, 0.98, 0.8, 0.95)
+const GLOW_COLOR: Color = Color(1.0, 0.88, 0.2, 0.75)
+const SPARKLE_COLOR: Color = Color(1.0, 1.0, 0.95, 1.0)
 
 var is_collected: bool = false
 var _t: float = randf() * TAU
@@ -33,7 +33,7 @@ func _on_body_entered(body: Node) -> void:
 
 func _draw() -> void:
 	var pulse: float = 0.6 + 0.4 * sin(_t * 4.0)
-	draw_circle(Vector2.ZERO, RADIUS * 2.0 * pulse, Color(GLOW_COLOR.r, GLOW_COLOR.g, GLOW_COLOR.b, GLOW_COLOR.a * pulse), true, -1.0, true)
+	draw_circle(Vector2.ZERO, RADIUS * 2.6 * pulse, Color(GLOW_COLOR.r, GLOW_COLOR.g, GLOW_COLOR.b, GLOW_COLOR.a * pulse), true, -1.0, true)
 
 	# faceted gem silhouette: pointed top, wide middle, pointed bottom
 	var top: Vector2 = Vector2(0, -RADIUS * 1.3)

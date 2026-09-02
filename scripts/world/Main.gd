@@ -76,15 +76,15 @@ const THUNDER_INTERVAL_MAX: float = 14.0
 const FLOWER_CHANCE: float = 0.2
 
 # Difficulty modes: multipliers applied on top of the base level curve.
-# Easy = 50% fewer traps/eagles than Medium, smaller gaps (more safe
-# platforms follows naturally from fewer hazards). Hard's multipliers are
-# roughly double the old ones so it still lands close to the old Hard feel
-# now that the shared base rates above were halved.
-const DIFFICULTY_TRAP_MULT: Dictionary = {"EASY": 0.5, "MEDIUM": 1.0, "HARD": 3.5}
-const DIFFICULTY_HAZARD_MULT: Dictionary = {"EASY": 0.5, "MEDIUM": 1.0, "HARD": 2.8}
-const DIFFICULTY_GAP_MULT: Dictionary = {"EASY": 0.8, "MEDIUM": 1.0, "HARD": 1.15}
+# Immersion pass: shifted every tier down again per feedback — the old
+# Medium multipliers (1.0x) now define Hard, the old Easy multipliers
+# (0.5x) now define Medium, and a brand new, gentler Easy (0.25x, smaller
+# gaps for more forgiving jumps) sits below that.
+const DIFFICULTY_TRAP_MULT: Dictionary = {"EASY": 0.25, "MEDIUM": 0.5, "HARD": 1.0}
+const DIFFICULTY_HAZARD_MULT: Dictionary = {"EASY": 0.25, "MEDIUM": 0.5, "HARD": 1.0}
+const DIFFICULTY_GAP_MULT: Dictionary = {"EASY": 0.65, "MEDIUM": 0.8, "HARD": 1.0}
 const DIFFICULTY_BIRD_INTERVAL_MULT: Dictionary = {"EASY": 0.6, "MEDIUM": 1.0, "HARD": 1.6}
-const DIFFICULTY_EAGLE_CHANCE_MULT: Dictionary = {"EASY": 0.5, "MEDIUM": 1.0, "HARD": 3.0}
+const DIFFICULTY_EAGLE_CHANCE_MULT: Dictionary = {"EASY": 0.25, "MEDIUM": 0.5, "HARD": 1.0}
 const EAGLE_BASE_CHANCE: float = 0.25
 
 # Coin-reward power-ups (Shop).
@@ -98,6 +98,8 @@ const MEMORY_TEXTS: Dictionary = {
 	700: "The wall remembers why.",
 	1500: "You are not the first to come this far.",
 }
+
+const LEVEL_UP_PAUSE_TIME: float = 1.2
 
 const CHECKPOINT_SHAKE_STRENGTH: float = 4.0
 const CHECKPOINT_SHAKE_DURATION: float = 0.25
@@ -147,6 +149,7 @@ const CLOUD_DRIFT_RANGE: float = 620.0
 @onready var season_banner = $SeasonBanner
 @onready var thunder_flash = $ThunderFlash
 @onready var shop_screen = $ShopScreen
+@onready var rest_area_screen = $RestAreaScreen
 
 @onready var mountains: Array = [
 	$ParallaxBackground/Far/Mountain1, $ParallaxBackground/Far/Mountain2,
@@ -200,6 +203,9 @@ func _ready() -> void:
 	hud.save_position_requested.connect(_on_save_position_requested)
 	hud.shop_requested.connect(_on_shop_requested)
 	shop_screen.item_purchased.connect(_on_item_purchased)
+	rest_area_screen.save_requested.connect(_on_save_position_requested)
+	rest_area_screen.shop_requested.connect(_on_shop_requested)
+	rest_area_screen.continue_requested.connect(_on_rest_area_continue)
 
 	var top_y: float = _generate_platforms()
 	player.global_position = spawn_position
@@ -347,6 +353,7 @@ func _check_season_transition(height: float) -> void:
 		return
 
 	var is_first: bool = current_level_idx == -1
+	var leveled_up: bool = not is_first and level_idx > current_level_idx
 	current_level_idx = level_idx
 	hud.set_season(SEASON_NAMES[level_idx])
 	_recompute_friction()
@@ -358,8 +365,29 @@ func _check_season_transition(height: float) -> void:
 	if level_idx == 4 and not weather_blessing_active:
 		_restart_timer(thunder_timer, THUNDER_INTERVAL_MIN, THUNDER_INTERVAL_MAX)
 
-	if not is_first:
+	if leveled_up:
+		_celebrate_level_up(height, level_idx)
+	elif not is_first:
 		season_banner.show_season(SEASON_NAMES[level_idx])
+
+
+# Reaching a new level (100/300/600/900m) should feel like completing a
+# chapter: banner + sound, a brief pause so it actually registers, then a
+# Rest Area to save/shop/breathe before continuing.
+func _celebrate_level_up(height: float, level_idx: int) -> void:
+	season_banner.show_season(SEASON_NAMES[level_idx])
+	AudioManager.play("unlock")
+	get_tree().paused = true
+	get_tree().create_timer(LEVEL_UP_PAUSE_TIME).timeout.connect(_on_level_up_pause_ended.bind(int(height)))
+
+
+func _on_level_up_pause_ended(height: int) -> void:
+	rest_area_screen.open(height)
+
+
+func _on_rest_area_continue() -> void:
+	shop_screen.visible = false
+	get_tree().paused = false
 
 
 # Combines the base season friction with any active buffs. Called whenever
