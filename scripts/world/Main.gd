@@ -32,17 +32,11 @@ const LEVEL_UP_RING_SCENE: PackedScene = preload("res://scenes/effects/LevelUpRi
 
 const VIEWPORT_WIDTH: float = 540.0
 const EDGE_MARGIN: float = 90.0
-# Final Gameplay+Visual Pass: gaps are now defined directly per difficulty
-# (not a shared base * multiplier) so each tier can be pushed hard without
-# one tier's increase distorting another's. The requested +50-300% figures
-# would push Medium/Hard's vertical gap past what a single jump can ever
-# cross (max rise is ~432px, see PHYSICS_* below) — reachability is called
-# out in the same request as non-negotiable, so these ranges are the
-# largest that stay under that ceiling with real margin, not the literal
-# percentages. See MAX_SAFE_VERTICAL_GAP.
-const DIFFICULTY_GAP_RANGE: Dictionary = {
-	"EASY": Vector2(90.0, 180.0), "MEDIUM": Vector2(150.0, 260.0), "HARD": Vector2(220.0, 355.0),
-}
+# Final Hotfix: Easy/Medium/Hard now share one platform-generation layout —
+# width, gap/spacing and placement no longer vary by difficulty. Only trap
+# chance and eagle chance still differ (see DIFFICULTY_TRAP_MULT /
+# DIFFICULTY_EAGLE_CHANCE_MULT below). This value was Medium's range.
+const GAP_RANGE: Vector2 = Vector2(150.0, 260.0)
 const MAX_SAFE_VERTICAL_GAP: float = 360.0
 const FALL_DEATH_MARGIN: float = 200.0
 const CAMERA_TOP_MARGIN: float = 500.0
@@ -137,44 +131,30 @@ const STORM_CLOUD_FAR_COLOR: Color = Color(0.4, 0.42, 0.48, 1)
 const NEUTRAL_CLOUD_FAR_COLOR: Color = Color(1, 1, 1, 1)
 const STORM_WIND_INTENSITY_MULT: float = 2.4
 
-# Difficulty modes: multipliers applied on top of the base level curve.
-# Balance Rework: rebuilt from scratch against Medium as the balanced 1.0
-# baseline (previous passes tied Medium/Hard to older, softer tiers — this
-# pass replaces that relationship with an explicit, clearly-felt spread).
-# Easy: -70% traps/eagles, gentler hazards overall, shorter gaps, wider
-# platforms, more frequent bonus birds. Hard: noticeably more traps/eagles,
-# farther gaps, narrower platforms.
+# Final Hotfix: the only difficulty-specific knobs left are trap chance and
+# eagle chance (Easy fewer, Medium normal, Hard more) — everything about
+# platform generation itself (width, gap, spacing, layout) is now shared.
 const DIFFICULTY_TRAP_MULT: Dictionary = {"EASY": 0.3, "MEDIUM": 1.0, "HARD": 1.6}
-const DIFFICULTY_HAZARD_MULT: Dictionary = {"EASY": 0.4, "MEDIUM": 1.0, "HARD": 1.5}
-const DIFFICULTY_BIRD_INTERVAL_MULT: Dictionary = {"EASY": 0.6, "MEDIUM": 1.0, "HARD": 1.6}
 const DIFFICULTY_EAGLE_CHANCE_MULT: Dictionary = {"EASY": 0.3, "MEDIUM": 1.0, "HARD": 1.6}
 const EAGLE_BASE_CHANCE: float = 0.25
 
-# Final Pass: platforms are no longer one fixed size — width is picked per
-# spawn from 4 categories, distributed differently per difficulty (Easy
-# skews long/generous, Hard skews short/narrow) so consecutive platforms
-# never look like a uniform staircase and each difficulty is visibly
-# distinct at a glance. BASE_PLATFORM_WIDTH matches the width the platform
-# scenes are authored at (Polygon2D -80..80, CollisionShape2D 160 wide).
+# Platforms are no longer one fixed size — width is picked per spawn from 4
+# categories (same weighted mix for every difficulty now) so consecutive
+# platforms never look like a uniform staircase. BASE_PLATFORM_WIDTH matches
+# the width the platform scenes are authored at (Polygon2D -80..80,
+# CollisionShape2D 160 wide).
 const BASE_PLATFORM_WIDTH: float = 160.0
 const WIDTH_CATEGORY_RANGES: Dictionary = {
 	"short": Vector2(60.0, 100.0), "medium": Vector2(100.0, 180.0),
 	"long": Vector2(180.0, 300.0), "xlong": Vector2(300.0, 450.0),
 }
-const DIFFICULTY_WIDTH_WEIGHTS: Dictionary = {
-	"EASY": {"short": 0.05, "medium": 0.2, "long": 0.4, "xlong": 0.35},
-	"MEDIUM": {"short": 0.25, "medium": 0.3, "long": 0.3, "xlong": 0.15},
-	"HARD": {"short": 0.45, "medium": 0.3, "long": 0.2, "xlong": 0.05},
+const PLATFORM_WIDTH_WEIGHTS: Dictionary = {
+	"short": 0.25, "medium": 0.3, "long": 0.3, "xlong": 0.15,
 }
 
-# Easy Mode Rebalance: horizontal reach between consecutive platforms is
-# constrained (Medium/Hard keep the old fully-free full-width placement —
-# only Easy gets this). MAX_HORIZONTAL_SHIFT is the full baseline budget
-# (VIEWPORT_WIDTH - 2*EDGE_MARGIN); Easy uses half of it. Platform density
-# is boosted 50% and Fake platforms are mostly removed so a beginner is
-# never stuck behind an unreachable or deceptive gap.
+# Full baseline horizontal shift budget (VIEWPORT_WIDTH - 2*EDGE_MARGIN),
+# used the same way for every difficulty.
 const MAX_HORIZONTAL_SHIFT: float = 360.0
-const EASY_HORIZONTAL_SHIFT_MULT: float = 0.5
 
 # Bug Fix Pass: found while validating the gap increase above — Medium/Hard's
 # fully-free horizontal placement (independent of the vertical gap rolled)
@@ -190,17 +170,6 @@ const PHYSICS_MAX_JUMP_SPEED: float = 1100.0
 const PHYSICS_MOVE_SPEED: float = 220.0
 const PHYSICS_AIR_ACCEL: float = 900.0
 const REACHABILITY_SAFETY_MARGIN: float = 0.85
-const DIFFICULTY_PLATFORM_COUNT_MULT: Dictionary = {"EASY": 1.15, "MEDIUM": 1.0, "HARD": 1.0}
-const DIFFICULTY_FAKE_MULT: Dictionary = {"EASY": 0.2, "MEDIUM": 1.0, "HARD": 1.0}
-
-# Comprehensive Gameplay Pass: the first 100m on Easy gets its own extra
-# layer of safety on top of the Easy numbers above — no fake platforms at
-# all, no birds at all (Storm can't happen this early anyway, since Winter
-# is always the first season band), gaps tightened further still. This is
-# purely a learning window; normal Easy numbers resume past 100m.
-const BEGINNER_ZONE_HEIGHT_M: float = 100.0
-const BEGINNER_VERTICAL_MULT: float = 0.7
-const BEGINNER_HORIZONTAL_MULT: float = 0.6
 
 # Lives: 3 per run by default (+1 with the Extra Heart upgrade). Hitting 0
 # shows Game Over (Continue refills to max and resumes at the checkpoint;
@@ -337,10 +306,6 @@ var thunder_timer: Timer
 var shield_timer: Timer
 
 
-func _is_beginner_zone() -> bool:
-	return difficulty == "EASY" and current_height < BEGINNER_ZONE_HEIGHT_M
-
-
 func _ready() -> void:
 	randomize()
 	difficulty = SaveManager.data.difficulty
@@ -400,7 +365,7 @@ func _generate_platforms() -> float:
 	spawn_position = Vector2(x, y - 60.0)
 	kill_y = y + FALL_DEATH_MARGIN
 
-	var platform_count: int = int(PLATFORM_COUNT * DIFFICULTY_PLATFORM_COUNT_MULT.get(difficulty, 1.0))
+	var platform_count: int = PLATFORM_COUNT
 
 	for i in range(platform_count):
 		var height: float = max(0.0, (spawn_position.y - y) / PIXELS_PER_METER)
@@ -417,11 +382,7 @@ func _generate_platforms() -> float:
 				_spawn_spike(Vector2(x, y))
 
 		if i < platform_count - 1:
-			var beginner: bool = difficulty == "EASY" and height < BEGINNER_ZONE_HEIGHT_M
-			var gap_range: Vector2 = DIFFICULTY_GAP_RANGE.get(difficulty, Vector2(150.0, 260.0))
-			var gap_px: float = randf_range(gap_range.x, gap_range.y)
-			if beginner:
-				gap_px *= BEGINNER_VERTICAL_MULT
+			var gap_px: float = randf_range(GAP_RANGE.x, GAP_RANGE.y)
 			# Hard ceiling regardless of difficulty — a single jump can only
 			# ever rise so far (see _max_reachable_horizontal), so no gap is
 			# ever allowed past that no matter what the range above rolls.
@@ -432,18 +393,8 @@ func _generate_platforms() -> float:
 			# to cross, regardless of difficulty — cap the horizontal reach to
 			# what THIS gap's vertical rise actually allows, with margin.
 			var max_safe_shift: float = _max_reachable_horizontal(gap_px) * REACHABILITY_SAFETY_MARGIN
-			if difficulty == "EASY":
-				# Easy is additionally constrained relative to the previous
-				# platform on top of the safety cap (Medium/Hard only get the
-				# safety cap, otherwise keeping their old full-width freedom).
-				var shift_mult: float = EASY_HORIZONTAL_SHIFT_MULT
-				if beginner:
-					shift_mult *= BEGINNER_HORIZONTAL_MULT
-				var max_shift: float = min(MAX_HORIZONTAL_SHIFT * shift_mult, max_safe_shift)
-				x = clamp(x + randf_range(-max_shift, max_shift), EDGE_MARGIN, VIEWPORT_WIDTH - EDGE_MARGIN)
-			else:
-				var max_shift: float = min(MAX_HORIZONTAL_SHIFT, max_safe_shift)
-				x = clamp(x + randf_range(-max_shift, max_shift), EDGE_MARGIN, VIEWPORT_WIDTH - EDGE_MARGIN)
+			var max_shift: float = min(MAX_HORIZONTAL_SHIFT, max_safe_shift)
+			x = clamp(x + randf_range(-max_shift, max_shift), EDGE_MARGIN, VIEWPORT_WIDTH - EDGE_MARGIN)
 
 	return y
 
@@ -463,12 +414,11 @@ func _max_reachable_horizontal(vertical_gap: float) -> float:
 
 
 # Picks a random platform width in pixels from one of the 4 categories
-# (short/medium/long/xlong), weighted per difficulty so Easy skews toward
-# long generous platforms and Hard skews toward short narrow ones — the
+# (short/medium/long/xlong) — same weighted mix for every difficulty, so the
 # resulting mix of very different lengths side by side is what breaks the
-# "uniform staircase" look, not just wider gaps alone.
-func _pick_platform_width(diff: String) -> float:
-	var weights: Dictionary = DIFFICULTY_WIDTH_WEIGHTS.get(diff, DIFFICULTY_WIDTH_WEIGHTS["MEDIUM"])
+# "uniform staircase" look, not a per-difficulty skew.
+func _pick_platform_width() -> float:
+	var weights: Dictionary = PLATFORM_WIDTH_WEIGHTS
 	var total: float = 0.0
 	for w in weights.values():
 		total += w
@@ -497,14 +447,10 @@ func _spawn_platform_variant(i: int, x: float, y: float, height: float) -> Dicti
 
 	if i > 0 and height >= SAFE_ZONE_HEIGHT_M:
 		var level_idx: int = _get_level_index(height)
-		var hazard_mult: float = DIFFICULTY_HAZARD_MULT.get(difficulty, 1.0)
 		var trap_mult: float = DIFFICULTY_TRAP_MULT.get(difficulty, 1.0)
-		# Fake platforms are the one hazard a beginner can't yet read by
-		# color — mostly removed on Easy, fully off in the first 100m.
-		var beginner: bool = difficulty == "EASY" and height < BEGINNER_ZONE_HEIGHT_M
-		var fake_chance: float = 0.0 if beginner else FAKE_PLATFORM_CHANCE * DIFFICULTY_FAKE_MULT.get(difficulty, 1.0)
-		var moving_chance: float = clamp(LEVEL_MOVING_CHANCE[level_idx] * hazard_mult, 0.0, 0.9)
-		var collapsing_chance: float = clamp(LEVEL_COLLAPSING_CHANCE[level_idx] * hazard_mult, 0.0, 0.9)
+		var fake_chance: float = FAKE_PLATFORM_CHANCE
+		var moving_chance: float = clamp(LEVEL_MOVING_CHANCE[level_idx], 0.0, 0.9)
+		var collapsing_chance: float = clamp(LEVEL_COLLAPSING_CHANCE[level_idx], 0.0, 0.9)
 		var trap_chance: float = clamp(LEVEL_TRAP_CHANCE[level_idx] * trap_mult, 0.0, 0.9)
 
 		var roll: float = randf()
@@ -524,7 +470,7 @@ func _spawn_platform_variant(i: int, x: float, y: float, height: float) -> Dicti
 	var platform: Node = scene.instantiate()
 	platform.position = Vector2(x, y)
 	if i > 0:
-		platform.scale.x *= _pick_platform_width(difficulty) / BASE_PLATFORM_WIDTH
+		platform.scale.x *= _pick_platform_width() / BASE_PLATFORM_WIDTH
 	add_child(platform)
 	platform.modulate = SEASON_PLATFORM_MODULATE[_get_level_index(height)]
 
@@ -924,8 +870,7 @@ func _restart_timer(t: Timer, min_s: float, max_s: float) -> void:
 
 
 func _restart_bird_timer(t: Timer, min_s: float, max_s: float) -> void:
-	var mult: float = DIFFICULTY_BIRD_INTERVAL_MULT.get(difficulty, 1.0)
-	t.start(randf_range(min_s, max_s) * mult)
+	t.start(randf_range(min_s, max_s))
 
 
 func _bird_spawn_position(from_left: bool) -> Vector2:
@@ -952,14 +897,14 @@ func _on_common_bird_collected(bird: Node2D) -> void:
 
 
 func _on_common_bird_timer() -> void:
-	if not is_dead and not _is_beginner_zone():
+	if not is_dead:
 		var from_left: bool = randf() < 0.5
 		_spawn_common_bird_from(_bird_spawn_position(from_left), 1.0 if from_left else -1.0)
 	_restart_bird_timer(common_bird_timer, 10.0, 20.0)
 
 
 func _on_special_bird_timer() -> void:
-	if not is_dead and not _is_beginner_zone():
+	if not is_dead:
 		var roll: float = randf()
 		if current_zone == 2 and roll < 0.5:
 			_spawn_shadow_bird()
