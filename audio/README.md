@@ -2,8 +2,8 @@
 
 See `docs/AUDIO_ASSET_LIST.md` for the current priority delivery list. This
 file is the full manifest, including a few lower-priority hooks (`coin`,
-`landing`, `hit`, `area_discovery`, `click`, `unlock`) that already exist in
-code but aren't part of that priority list yet.
+`landing`, `area_discovery`, `click`, `unlock`) that already exist in code but
+aren't part of that priority list yet.
 
 This project no longer generates audio procedurally. `AudioManager` and
 `MusicManager` load real audio files from the paths below; until a file
@@ -43,8 +43,8 @@ starts. `MusicManager` handles looping automatically for `.ogg`/`.mp3`/`.wav`.
 | `landing.ogg` | Hard landing |
 | `memory.ogg` | Memory reveal (100m/300m/700m/1500m) |
 | `nearmiss.ogg` | Dying within 5m of a checkpoint |
-| `bird.ogg` | Collecting the rare white bird, and discovering a bird nest (both events share this file) |
-| `hit.ogg` | Predator bird knockback |
+| `bird.ogg` | Collecting the rare white bird, discovering a bird nest, and collecting a common bird (all three share this file) — real chirp/tweet, never synthesized |
+| `eagle.ogg` | Eagle telegraph/strike (steals 3 coins, no death) — real eagle screech, never synthesized |
 | `area_discovery.ogg` | Crossing into a new zone |
 | `click.ogg` | UI button press |
 | `unlock.ogg` | Achievement unlock (dormant system, kept for completeness) |

@@ -18,6 +18,7 @@ const SFX_VOLUME_DB: Dictionary = {
 	"white_bird": 4.0,
 	"chirp": 4.0,
 	"near_miss": 5.0,
+	"eagle": 3.0,
 }
 const HYPE_PITCH_VARIANCE: float = 0.14
 
@@ -32,10 +33,10 @@ const SFX_PATHS: Dictionary = {
 	"near_miss": "res://audio/sfx/nearmiss.ogg",
 	"white_bird": "res://audio/sfx/bird.ogg",
 	"chirp": "res://audio/sfx/bird.ogg",
-	"hit": "res://audio/sfx/hit.ogg",
 	"area_discovery": "res://audio/sfx/area_discovery.ogg",
 	"click": "res://audio/sfx/click.ogg",
 	"unlock": "res://audio/sfx/unlock.ogg",
+	"eagle": "res://audio/sfx/eagle.ogg",
 }
 
 var _cache: Dictionary = {}

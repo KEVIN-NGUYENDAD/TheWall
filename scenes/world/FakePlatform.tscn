@@ -3,6 +3,6 @@
 [node name="FakePlatform" type="Node2D"]
 
 [node name="Polygon2D" type="Polygon2D" parent="."]
-color = Color(0.4, 0.78, 0.4, 1)
+color = Color(0.62, 0.35, 0.85, 1)
 antialiased = true
 polygon = PackedVector2Array(-80, -12, 80, -12, 80, 12, -80, 12)

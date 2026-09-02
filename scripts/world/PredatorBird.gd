@@ -1,11 +1,12 @@
 extends Area2D
 
-signal hit_player(knockback: Vector2)
+# Represents the Eagle hazard: telegraphs a dive, then on contact costs the
+# player coins rather than causing knockback or death.
+signal hit_player
 
 const TELEGRAPH_TIME: float = 0.7
 const DIVE_SPEED: float = 340.0
 const LIFETIME: float = 4.0
-const KNOCKBACK_STRENGTH: float = 500.0
 const COLOR: Color = Color(0.95, 0.3, 0.15, 1.0)
 const ACCENT_COLOR: Color = Color(1.0, 0.75, 0.15, 1.0)
 const WARNING_COLOR: Color = Color(1.0, 0.55, 0.1, 1.0)
@@ -57,9 +58,7 @@ func _on_body_entered(body: Node) -> void:
 	if _triggered or not _diving or not body.is_in_group("player"):
 		return
 	_triggered = true
-	var knockback: Vector2 = dive_velocity.normalized() * KNOCKBACK_STRENGTH
-	knockback.y = -abs(knockback.y) - 200.0
-	hit_player.emit(knockback)
+	hit_player.emit()
 	queue_free()
 
 

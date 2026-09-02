@@ -1,4 +1,4 @@
-[gd_scene load_steps=10 format=3]
+[gd_scene load_steps=12 format=3]
 
 [ext_resource type="Script" path="res://scripts/world/Main.gd" id="1"]
 [ext_resource type="PackedScene" path="res://scenes/player/Player.tscn" id="2"]
@@ -10,6 +10,8 @@
 [ext_resource type="PackedScene" path="res://scenes/world/WindLayer.tscn" id="8"]
 [ext_resource type="PackedScene" path="res://scenes/world/SunRays.tscn" id="9"]
 [ext_resource type="PackedScene" path="res://scenes/world/SparkleField.tscn" id="10"]
+[ext_resource type="PackedScene" path="res://scenes/ui/SeasonBanner.tscn" id="11"]
+[ext_resource type="PackedScene" path="res://scenes/world/ThunderFlash.tscn" id="12"]
 
 [node name="Main" type="Node2D"]
 script = ExtResource("1")
@@ -96,6 +98,10 @@ polygon = PackedVector2Array(380, 300, 420, 282, 465, 296, 480, 314, 445, 328, 3
 [node name="ShapeAbove" parent="." instance=ExtResource("6")]
 
 [node name="WindLayer" parent="." instance=ExtResource("8")]
+
+[node name="SeasonBanner" parent="." instance=ExtResource("11")]
+
+[node name="ThunderFlash" parent="." instance=ExtResource("12")]
 
 [node name="Player" parent="." instance=ExtResource("2")]
 

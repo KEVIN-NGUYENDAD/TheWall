@@ -6,6 +6,7 @@ const PLATFORM_SCENE: PackedScene = preload("res://scenes/world/Platform.tscn")
 const MOVING_PLATFORM_SCENE: PackedScene = preload("res://scenes/world/MovingPlatform.tscn")
 const COLLAPSING_PLATFORM_SCENE: PackedScene = preload("res://scenes/world/CollapsingPlatform.tscn")
 const FAKE_PLATFORM_SCENE: PackedScene = preload("res://scenes/world/FakePlatform.tscn")
+const TRAP_PLATFORM_SCENE: PackedScene = preload("res://scenes/world/TrapPlatform.tscn")
 const CHECKPOINT_SCENE: PackedScene = preload("res://scenes/world/Checkpoint.tscn")
 const COIN_SCENE: PackedScene = preload("res://scenes/world/Coin.tscn")
 const SPIKE_SCENE: PackedScene = preload("res://scenes/world/Spike.tscn")
@@ -17,6 +18,13 @@ const WHITE_BIRD_SCENE: PackedScene = preload("res://scenes/world/WhiteBird.tscn
 const SHADOW_BIRD_SCENE: PackedScene = preload("res://scenes/world/ShadowBird.tscn")
 const PREDATOR_BIRD_SCENE: PackedScene = preload("res://scenes/world/PredatorBird.tscn")
 const FALLING_FEATHER_SCENE: PackedScene = preload("res://scenes/world/FallingFeather.tscn")
+const BUTTERFLY_SCENE: PackedScene = preload("res://scenes/world/Butterfly.tscn")
+const LEAF_SCENE: PackedScene = preload("res://scenes/world/Leaf.tscn")
+const SNOWFLAKE_SCENE: PackedScene = preload("res://scenes/world/Snowflake.tscn")
+const RAINDROP_SCENE: PackedScene = preload("res://scenes/world/RainDrop.tscn")
+const FLOWER_DECOR_SCENE: PackedScene = preload("res://scenes/world/FlowerDecor.tscn")
+const SEASON_BANNER_SCENE: PackedScene = preload("res://scenes/ui/SeasonBanner.tscn")
+const THUNDER_FLASH_SCENE: PackedScene = preload("res://scenes/world/ThunderFlash.tscn")
 
 const VIEWPORT_WIDTH: float = 540.0
 const EDGE_MARGIN: float = 90.0
@@ -28,6 +36,7 @@ const CHECKPOINT_INTERVAL_M: int = 100
 const COIN_CHANCE: float = 0.45
 const SPIKE_CHANCE: float = 0.1
 const NEAR_MISS_METERS: float = 5.0
+const EAGLE_MIN_HEIGHT_M: float = 100.0
 const NEST_CHANCE: float = 0.04
 
 # Onboarding safe zone: no hazards, no death, no death markers below this height.
@@ -36,9 +45,29 @@ const SPAWN_PROTECTION_TIME: float = 2.0
 const SPAWN_PLATFORM_SCALE: Vector2 = Vector2(2.0, 1.0)
 
 const FAKE_PLATFORM_CHANCE: float = 0.05
-const MOVING_PLATFORM_CHANCE: float = 0.12
-const SKY_MOVING_PLATFORM_CHANCE: float = 0.25
-const COLLAPSING_PLATFORM_CHANCE: float = 0.12
+
+# Level system: Level N = N-th 300/100m-ish band, each a bit harder than the
+# last (more moving/collapsing/trap platforms). Bands match the Season bands.
+const LEVEL_HEIGHTS: Array = [0.0, 100.0, 300.0, 600.0, 900.0]
+const LEVEL_MOVING_CHANCE: Array = [0.10, 0.14, 0.18, 0.22, 0.26]
+const LEVEL_COLLAPSING_CHANCE: Array = [0.08, 0.11, 0.15, 0.19, 0.23]
+const LEVEL_TRAP_CHANCE: Array = [0.0, 0.03, 0.05, 0.07, 0.09]
+
+# Platform colors are fixed per TYPE (not per zone) so players can recognize
+# hazards at a glance: green=normal, blue=moving, yellow=collapsing,
+# purple=fake, red=trap. Season only applies a light modulate tint on top.
+const SEASON_NAMES: Array = ["SPRING", "SUMMER", "AUTUMN", "WINTER", "STORM"]
+const SEASON_FRICTION_MULT: Array = [1.0, 1.0, 1.0, 0.6, 0.35]
+const SEASON_PLATFORM_MODULATE: Array = [
+	Color(1, 1, 1), Color(1, 1, 1), Color(1, 1, 1),
+	Color(0.82, 0.92, 1.0), Color(0.75, 0.8, 0.88),
+]
+const WEATHER_INTERVAL: Dictionary = {
+	0: 1.2, 1: 0.0, 2: 1.0, 3: 0.9, 4: 0.35,
+}
+const THUNDER_INTERVAL_MIN: float = 6.0
+const THUNDER_INTERVAL_MAX: float = 14.0
+const FLOWER_CHANCE: float = 0.2
 
 const MEMORY_HEIGHTS: Array = [100, 300, 700, 1500]
 const MEMORY_TEXTS: Dictionary = {
@@ -58,10 +87,6 @@ const ZONE_SKY_START_M: float = 100.0
 const ZONE_VOID_START_M: float = 500.0
 const VOID_INTENSITY_CAP_M: float = 1500.0
 const ZONE_TRANSITION_TIME: float = 2.5
-
-const RUINS_PLATFORM_COLOR: Color = Color(0.4, 0.78, 0.4, 1)
-const SKY_PLATFORM_COLOR: Color = Color(1.0, 0.82, 0.3, 1)
-const VOID_PLATFORM_COLOR: Color = Color(0.62, 0.48, 0.95, 1)
 
 const ZONE_SKY_COLORS: Dictionary = {
 	0: Color(0.5, 0.8, 0.98, 1),
@@ -92,6 +117,8 @@ const CLOUD_DRIFT_RANGE: float = 620.0
 @onready var death_screen = $DeathScreen
 @onready var memory_overlay = $MemoryOverlay
 @onready var wind_layer: Node2D = $WindLayer
+@onready var season_banner = $SeasonBanner
+@onready var thunder_flash = $ThunderFlash
 
 @onready var mountains: Array = [
 	$ParallaxBackground/Far/Mountain1, $ParallaxBackground/Far/Mountain2,
@@ -118,11 +145,14 @@ var active_markers: Array = []
 var bonus_height_m: float = 0.0
 var cloud_drift_t: float = 0.0
 var spawn_protection_timer: float = 0.0
+var current_level_idx: int = -1
 
 var common_bird_timer: Timer
 var special_bird_timer: Timer
 var predator_timer: Timer
 var feather_timer: Timer
+var weather_timer: Timer
+var thunder_timer: Timer
 
 
 func _ready() -> void:
@@ -139,6 +169,7 @@ func _ready() -> void:
 	start_y = spawn_position.y
 	_setup_camera(top_y)
 	_generate_checkpoints(top_y)
+	_apply_continue_checkpoint()
 	_spawn_recorded_death_markers()
 	_setup_ambience_timers()
 
@@ -155,11 +186,13 @@ func _generate_platforms() -> float:
 
 	for i in range(PLATFORM_COUNT):
 		var height: float = max(0.0, (spawn_position.y - y) / PIXELS_PER_METER)
-		var platform: Node = _spawn_platform_variant(i, x, y, height)
+		var result: Dictionary = _spawn_platform_variant(i, x, y, height)
+		var platform: Node = result.node
+		var ptype: String = result.type
 
 		if i == 0:
 			platform.scale = SPAWN_PLATFORM_SCALE
-		elif platform is StaticBody2D or platform is AnimatableBody2D:
+		elif ptype in ["normal", "moving", "collapsing"]:
 			if randf() < COIN_CHANCE:
 				_spawn_coin(Vector2(x, y - 50.0))
 			if height >= SAFE_ZONE_HEIGHT_M and randf() < SPIKE_CHANCE:
@@ -172,47 +205,56 @@ func _generate_platforms() -> float:
 	return y
 
 
-func _spawn_platform_variant(i: int, x: float, y: float, height: float) -> Node:
+func _get_level_index(height: float) -> int:
+	var idx: int = 0
+	for i in range(LEVEL_HEIGHTS.size()):
+		if height >= LEVEL_HEIGHTS[i]:
+			idx = i
+	return idx
+
+
+func _spawn_platform_variant(i: int, x: float, y: float, height: float) -> Dictionary:
 	var scene: PackedScene = PLATFORM_SCENE
-	var is_normal: bool = true
+	var ptype: String = "normal"
 
 	if i > 0 and height >= SAFE_ZONE_HEIGHT_M:
-		var moving_chance: float = MOVING_PLATFORM_CHANCE
-		if height >= ZONE_SKY_START_M and height < ZONE_VOID_START_M:
-			moving_chance = SKY_MOVING_PLATFORM_CHANCE
+		var level_idx: int = _get_level_index(height)
+		var moving_chance: float = LEVEL_MOVING_CHANCE[level_idx]
+		var collapsing_chance: float = LEVEL_COLLAPSING_CHANCE[level_idx]
+		var trap_chance: float = LEVEL_TRAP_CHANCE[level_idx]
 
 		var roll: float = randf()
 		if roll < FAKE_PLATFORM_CHANCE:
 			scene = FAKE_PLATFORM_SCENE
-			is_normal = false
+			ptype = "fake"
 		elif roll < FAKE_PLATFORM_CHANCE + moving_chance:
 			scene = MOVING_PLATFORM_SCENE
-			is_normal = false
-		elif roll < FAKE_PLATFORM_CHANCE + moving_chance + COLLAPSING_PLATFORM_CHANCE:
+			ptype = "moving"
+		elif roll < FAKE_PLATFORM_CHANCE + moving_chance + collapsing_chance:
 			scene = COLLAPSING_PLATFORM_SCENE
-			is_normal = false
+			ptype = "collapsing"
+		elif roll < FAKE_PLATFORM_CHANCE + moving_chance + collapsing_chance + trap_chance:
+			scene = TRAP_PLATFORM_SCENE
+			ptype = "trap"
 
 	var platform: Node = scene.instantiate()
 	platform.position = Vector2(x, y)
 	add_child(platform)
+	platform.modulate = SEASON_PLATFORM_MODULATE[_get_level_index(height)]
 
-	if is_normal or scene == FAKE_PLATFORM_SCENE:
-		_apply_zone_platform_color(platform, height)
-		if is_normal and i > 0 and height >= SAFE_ZONE_HEIGHT_M and randf() < NEST_CHANCE:
+	if ptype == "normal":
+		if i > 0 and height >= SAFE_ZONE_HEIGHT_M and randf() < NEST_CHANCE:
 			_spawn_nest(Vector2(x, y - 40.0))
+		if _get_level_index(height) == 0 and randf() < FLOWER_CHANCE:
+			_spawn_flower(Vector2(x, y - 20.0))
 
-	return platform
+	return {"node": platform, "type": ptype}
 
 
-func _apply_zone_platform_color(platform: Node, height: float) -> void:
-	var color: Color = RUINS_PLATFORM_COLOR
-	if height >= ZONE_VOID_START_M:
-		color = VOID_PLATFORM_COLOR
-	elif height >= ZONE_SKY_START_M:
-		color = SKY_PLATFORM_COLOR
-	var poly: Polygon2D = platform.get_node_or_null("Polygon2D")
-	if poly:
-		poly.color = color
+func _spawn_flower(pos: Vector2) -> void:
+	var flower: Node2D = FLOWER_DECOR_SCENE.instantiate()
+	flower.position = pos
+	add_child(flower)
 
 
 func _get_zone_for_height(height: float) -> int:
@@ -254,6 +296,25 @@ func _check_zone_transition(height: float) -> void:
 			tween.tween_property(c, "color", ZONE_CLOUD_COLORS[zone], ZONE_TRANSITION_TIME)
 
 	MusicManager.set_intensity(_zone_progress(height, zone))
+
+
+func _check_season_transition(height: float) -> void:
+	var level_idx: int = _get_level_index(height)
+	if level_idx == current_level_idx:
+		return
+
+	var is_first: bool = current_level_idx == -1
+	current_level_idx = level_idx
+	player.ground_friction_mult = SEASON_FRICTION_MULT[level_idx]
+
+	var interval: float = WEATHER_INTERVAL.get(level_idx, 0.0)
+	if interval > 0.0:
+		_restart_timer(weather_timer, interval, interval * 1.6)
+	if level_idx == 4:
+		_restart_timer(thunder_timer, THUNDER_INTERVAL_MIN, THUNDER_INTERVAL_MAX)
+
+	if not is_first:
+		season_banner.show_season(SEASON_NAMES[level_idx])
 
 
 func _set_sky_color(color: Color) -> void:
@@ -308,6 +369,30 @@ func _generate_checkpoints(top_y: float) -> void:
 		checkpoint.activated.connect(_on_checkpoint_activated)
 		checkpoints.append(checkpoint)
 		m += CHECKPOINT_INTERVAL_M
+
+
+func _apply_continue_checkpoint() -> void:
+	if not SaveManager.pending_continue:
+		return
+	SaveManager.pending_continue = false
+
+	var target_height: float = SaveManager.data.checkpoint_height
+	if target_height <= 0.0:
+		return
+
+	var best_checkpoint: Node = null
+	for checkpoint in checkpoints:
+		if float(checkpoint.height_meters) <= target_height:
+			if best_checkpoint == null or checkpoint.height_meters > best_checkpoint.height_meters:
+				best_checkpoint = checkpoint
+	if best_checkpoint == null:
+		return
+
+	best_checkpoint.is_active = true
+	var pos: Vector2 = Vector2(VIEWPORT_WIDTH / 2.0, best_checkpoint.global_position.y - 20.0)
+	player.global_position = pos
+	current_checkpoint_position = pos
+	current_checkpoint_height = float(best_checkpoint.height_meters)
 
 
 func _spawn_recorded_death_markers() -> void:
@@ -374,6 +459,16 @@ func _setup_ambience_timers() -> void:
 	feather_timer.timeout.connect(_on_feather_timer)
 	_restart_timer(feather_timer, 4.0, 8.0)
 
+	weather_timer = Timer.new()
+	weather_timer.one_shot = true
+	add_child(weather_timer)
+	weather_timer.timeout.connect(_on_weather_timer)
+
+	thunder_timer = Timer.new()
+	thunder_timer.one_shot = true
+	add_child(thunder_timer)
+	thunder_timer.timeout.connect(_on_thunder_timer)
+
 
 func _restart_timer(t: Timer, min_s: float, max_s: float) -> void:
 	t.start(randf_range(min_s, max_s))
@@ -387,10 +482,17 @@ func _bird_spawn_position(from_left: bool) -> Vector2:
 
 
 func _spawn_common_bird_from(pos: Vector2, direction: float) -> void:
-	var bird: Node2D = COMMON_BIRD_SCENE.instantiate()
+	var bird: Area2D = COMMON_BIRD_SCENE.instantiate()
 	bird.position = pos
 	bird.direction = direction
 	add_child(bird)
+	bird.collected.connect(_on_common_bird_collected.bind(bird))
+
+
+func _on_common_bird_collected(bird: Node2D) -> void:
+	SaveManager.add_coins(1)
+	AudioManager.play("chirp")
+	_spawn_particle_burst(bird.global_position, Color(1.0, 0.9, 0.4, 0.9), 10, 130.0, 0.4)
 
 
 func _on_common_bird_timer() -> void:
@@ -429,7 +531,7 @@ func _spawn_shadow_bird() -> void:
 func _on_predator_timer() -> void:
 	if not is_dead:
 		var height: float = max(0.0, start_y - player.global_position.y) / PIXELS_PER_METER
-		if height >= SAFE_ZONE_HEIGHT_M and randf() < 0.5:
+		if height >= EAGLE_MIN_HEIGHT_M and randf() < 0.5:
 			_spawn_predator_bird()
 	_restart_timer(predator_timer, 30.0, 45.0)
 
@@ -439,14 +541,16 @@ func _spawn_predator_bird() -> void:
 	var bird: Area2D = PREDATOR_BIRD_SCENE.instantiate()
 	bird.position = _bird_spawn_position(from_left)
 	add_child(bird)
-	bird.hit_player.connect(_on_predator_hit)
+	bird.hit_player.connect(_on_eagle_hit)
 	bird.begin_telegraph(player)
 
 
-func _on_predator_hit(knockback: Vector2) -> void:
+func _on_eagle_hit() -> void:
 	if spawn_protection_timer > 0.0:
 		return
-	player.apply_knockback(knockback)
+	SaveManager.remove_coins(3)
+	AudioManager.play("eagle")
+	hud.show_toast("Eagle stole 3 coins!")
 
 
 func _on_white_bird_collected(bonus: float) -> void:
@@ -468,12 +572,53 @@ func _spawn_feather() -> void:
 	add_child(feather)
 
 
+func _on_weather_timer() -> void:
+	if not is_dead:
+		_spawn_weather_particle(current_level_idx)
+	var interval: float = WEATHER_INTERVAL.get(current_level_idx, 0.0)
+	if interval > 0.0:
+		_restart_timer(weather_timer, interval, interval * 1.6)
+
+
+func _spawn_weather_particle(level_idx: int) -> void:
+	var center: Vector2 = camera.get_screen_center_position()
+	var scene: PackedScene = null
+	match level_idx:
+		0:
+			scene = BUTTERFLY_SCENE
+		2:
+			scene = LEAF_SCENE
+		3:
+			scene = SNOWFLAKE_SCENE
+		4:
+			scene = RAINDROP_SCENE
+	if scene == null:
+		return
+	var particle: Node2D = scene.instantiate()
+	var top: bool = level_idx != 0
+	particle.position = Vector2(
+		randf_range(center.x - 260.0, center.x + 260.0),
+		center.y - 500.0 if top else center.y + randf_range(-150.0, 150.0)
+	)
+	if level_idx == 0:
+		particle.direction = 1.0 if randf() < 0.5 else -1.0
+	add_child(particle)
+
+
+func _on_thunder_timer() -> void:
+	if not is_dead and current_level_idx == 4:
+		thunder_flash.flash()
+		_restart_timer(thunder_timer, THUNDER_INTERVAL_MIN, THUNDER_INTERVAL_MAX)
+
+
 func _process(delta: float) -> void:
 	_update_cloud_drift(delta)
 	wind_layer.global_position = camera.get_screen_center_position() - Vector2(VIEWPORT_WIDTH / 2.0, 480.0)
 
 	if is_dead:
 		return
+
+	SaveManager.add_play_time(delta)
 
 	if spawn_protection_timer > 0.0:
 		spawn_protection_timer = max(spawn_protection_timer - delta, 0.0)
@@ -485,6 +630,7 @@ func _process(delta: float) -> void:
 	SaveManager.update_best_height(height)
 	_check_memories(height)
 	_check_zone_transition(height)
+	_check_season_transition(height)
 
 	if not tutorial_hidden and SaveManager.data.stats.total_jumps > 0:
 		hud.hide_tutorial_hint()
@@ -538,6 +684,8 @@ func _on_checkpoint_activated(checkpoint: Node) -> void:
 	checkpoints_this_run += 1
 	current_checkpoint_position = Vector2(VIEWPORT_WIDTH / 2.0, checkpoint.global_position.y - 20.0)
 	current_checkpoint_height = float(checkpoint.height_meters)
+	var level_idx: int = _get_level_index(current_checkpoint_height)
+	SaveManager.record_progress(current_checkpoint_height, level_idx + 1, SEASON_NAMES[level_idx])
 	SaveManager.record_checkpoint(checkpoints_this_run)
 	AudioManager.play("checkpoint")
 	hud.show_toast("Checkpoint! %dm" % checkpoint.height_meters)

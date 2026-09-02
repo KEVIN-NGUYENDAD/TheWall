@@ -29,6 +29,8 @@ const DASH_COOLDOWN: float = 0.6
 const DOUBLE_TAP_WINDOW: float = 0.3
 const DASH_STRETCH: Vector2 = Vector2(1.5, 0.6)
 
+var ground_friction_mult: float = 1.0
+
 var charge_time: float = 0.0
 var is_charging: bool = false
 var coyote_timer: float = 0.0
@@ -100,7 +102,7 @@ func _handle_movement(delta: float) -> void:
 		velocity.x = dash_direction * DASH_SPEED
 		return
 	var move_input: float = Input.get_axis("move_left", "move_right")
-	var accel: float = GROUND_ACCEL if is_on_floor() else AIR_ACCEL
+	var accel: float = (GROUND_ACCEL * ground_friction_mult) if is_on_floor() else AIR_ACCEL
 	velocity.x = move_toward(velocity.x, move_input * MOVE_SPEED, accel * delta)
 
 
@@ -157,11 +159,6 @@ func _release_jump() -> void:
 	visual.scale = JUMP_STRETCH
 	AudioManager.play("jump")
 	SaveManager.record_jump()
-
-
-func apply_knockback(knockback: Vector2) -> void:
-	velocity = knockback
-	AudioManager.play("hit")
 
 
 func reset_charge() -> void:

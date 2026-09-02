@@ -27,6 +27,10 @@ const ACHIEVEMENTS: Dictionary = {
 
 var data: Dictionary = {}
 
+# Session-only navigation flag (not persisted): set by MainMenu's Continue
+# button, consumed by Main.gd on load. Never written to disk.
+var pending_continue: bool = false
+
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
@@ -40,8 +44,13 @@ func _notification(what: int) -> void:
 
 func _default_data() -> Dictionary:
 	return {
+		"player_name": "",
 		"best_height": 0,
+		"checkpoint_height": 0,
+		"current_level": 1,
+		"current_season": "Spring",
 		"total_coins": 0,
+		"total_play_time": 0.0,
 		"unlocked_skins": ["default"],
 		"selected_skin": "default",
 		"achievements": {},
@@ -145,6 +154,31 @@ func add_coins(amount: int) -> void:
 		unlock_achievement("coins_200")
 	coins_changed.emit(data.total_coins)
 	data_changed.emit()
+
+
+func remove_coins(amount: int) -> void:
+	data.total_coins = max(0, data.total_coins - amount)
+	coins_changed.emit(data.total_coins)
+	data_changed.emit()
+
+
+func has_player_name() -> bool:
+	return data.player_name != ""
+
+
+func set_player_name(new_name: String) -> void:
+	data.player_name = new_name
+	save_game()
+
+
+func record_progress(checkpoint_height: float, level: int, season: String) -> void:
+	data.checkpoint_height = max(data.checkpoint_height, checkpoint_height)
+	data.current_level = level
+	data.current_season = season
+
+
+func add_play_time(delta: float) -> void:
+	data.total_play_time += delta
 
 
 func unlock_skin(id: String) -> bool:

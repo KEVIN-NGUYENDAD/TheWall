@@ -1,4 +1,6 @@
-extends Node2D
+extends Area2D
+
+signal collected
 
 const SPEED: float = 85.0
 const BOB_AMOUNT: float = 12.0
@@ -11,10 +13,20 @@ var direction: float = 1.0
 var _t: float = randf() * TAU
 var _age: float = 0.0
 var _start_y: float
+var _collected: bool = false
 
 
 func _ready() -> void:
 	_start_y = position.y
+	body_entered.connect(_on_body_entered)
+
+
+func _on_body_entered(body: Node) -> void:
+	if _collected or not body.is_in_group("player"):
+		return
+	_collected = true
+	collected.emit()
+	queue_free()
 
 
 func _process(delta: float) -> void:
