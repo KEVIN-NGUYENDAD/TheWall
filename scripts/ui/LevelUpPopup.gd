@@ -9,15 +9,16 @@ const FADE_OUT_TIME: float = 0.35
 @onready var bonus_label: Label = $Panel/VBox/BonusLabel
 
 var bonus_text: String = "Jump +3%"
+var max_bonus_text: String = "Jump MAXED"
 
 
 func _ready() -> void:
 	visible = false
 
 
-func show_level_up(level: int) -> void:
+func show_level_up(level: int, at_jump_cap: bool = false) -> void:
 	level_label.text = "Level %d" % level
-	bonus_label.text = bonus_text
+	bonus_label.text = max_bonus_text if at_jump_cap else bonus_text
 	panel.modulate.a = 0.0
 	panel.scale = Vector2(0.7, 0.7)
 	visible = true

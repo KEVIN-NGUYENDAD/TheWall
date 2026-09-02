@@ -3,4 +3,5 @@
 [ext_resource type="Script" path="res://scripts/effects/LevelUpRing.gd" id="1"]
 
 [node name="LevelUpRing" type="Node2D"]
+process_mode = 3
 script = ExtResource("1")

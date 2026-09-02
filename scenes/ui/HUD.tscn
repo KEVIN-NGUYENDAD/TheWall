@@ -41,96 +41,54 @@ anchor_top = 0.0
 anchor_right = 0.0
 anchor_bottom = 0.0
 offset_left = 20.0
-offset_top = 98.0
+offset_top = 100.0
 offset_right = 320.0
-offset_bottom = 122.0
-theme_override_font_sizes/font_size = 20
+offset_bottom = 128.0
+theme_override_font_sizes/font_size = 22
 theme_override_colors/font_color = Color(1.0, 0.85, 0.3, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 0.85)
 theme_override_constants/outline_size = 4
 text = "Level 1 → 2"
 
-[node name="LevelProgressBG" type="ColorRect" parent="."]
+[node name="LevelProgressBorder" type="ColorRect" parent="."]
+mouse_filter = 2
+anchor_left = 0.0
+anchor_top = 0.0
+anchor_right = 0.7
+anchor_bottom = 0.0
+offset_left = 20.0
+offset_top = 134.0
+offset_right = 0.0
+offset_bottom = 234.0
+color = Color(1.0, 0.95, 0.6, 1)
+
+[node name="LevelProgressBG" type="ColorRect" parent="LevelProgressBorder"]
 mouse_filter = 2
 anchor_left = 0.0
 anchor_top = 0.0
 anchor_right = 1.0
-anchor_bottom = 0.0
-offset_left = 20.0
-offset_top = 138.0
-offset_right = -20.0
-offset_bottom = 166.0
-color = Color(0.1, 0.1, 0.14, 0.75)
+anchor_bottom = 1.0
+offset_left = 5.0
+offset_top = 5.0
+offset_right = -5.0
+offset_bottom = -5.0
+color = Color(0.08, 0.08, 0.12, 0.92)
 
-[node name="LevelProgressFill" type="ColorRect" parent="LevelProgressBG"]
+[node name="LevelProgressFill" type="ColorRect" parent="LevelProgressBorder/LevelProgressBG"]
 anchor_left = 0.0
 anchor_top = 0.0
 anchor_right = 0.0
 anchor_bottom = 1.0
 offset_left = 0.0
 offset_right = 0.0
-color = Color(1.0, 0.85, 0.2, 0.95)
+color = Color(1.0, 0.72, 0.05, 1)
 
-[node name="CoinLabel" type="Label" parent="."]
-anchor_left = 1.0
+[node name="LevelProgressFillShine" type="ColorRect" parent="LevelProgressBorder/LevelProgressBG/LevelProgressFill"]
+anchor_left = 0.0
 anchor_top = 0.0
 anchor_right = 1.0
-anchor_bottom = 0.0
-offset_left = -230.0
-offset_top = 36.0
-offset_right = -86.0
-offset_bottom = 72.0
-theme_override_font_sizes/font_size = 28
-theme_override_colors/font_color = Color(0.95, 0.8, 0.2, 1)
-theme_override_colors/font_outline_color = Color(0, 0, 0, 0.85)
-theme_override_constants/outline_size = 5
-horizontal_alignment = 2
-text = "0"
-
-[node name="SeasonBG" type="ColorRect" parent="."]
-mouse_filter = 2
-anchor_left = 1.0
-anchor_top = 0.0
-anchor_right = 1.0
-anchor_bottom = 0.0
-offset_left = -234.0
-offset_top = 72.0
-offset_right = -12.0
-offset_bottom = 104.0
-color = Color(0.02, 0.04, 0.1, 0.8)
-
-[node name="SeasonLabel" type="Label" parent="."]
-anchor_left = 1.0
-anchor_top = 0.0
-anchor_right = 1.0
-anchor_bottom = 0.0
-offset_left = -230.0
-offset_top = 74.0
-offset_right = -16.0
-offset_bottom = 102.0
-theme_override_font_sizes/font_size = 20
-theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_colors/font_outline_color = Color(0, 0, 0, 1.0)
-theme_override_constants/outline_size = 5
-horizontal_alignment = 2
-vertical_alignment = 1
-text = ""
-
-[node name="LivesLabel" type="Label" parent="."]
-anchor_left = 1.0
-anchor_top = 0.0
-anchor_right = 1.0
-anchor_bottom = 0.0
-offset_left = -234.0
-offset_top = 108.0
-offset_right = -12.0
-offset_bottom = 132.0
-theme_override_font_sizes/font_size = 18
-theme_override_colors/font_color = Color(0.95, 0.25, 0.3, 1)
-theme_override_colors/font_outline_color = Color(0, 0, 0, 1.0)
-theme_override_constants/outline_size = 4
-horizontal_alignment = 2
-text = "❤❤❤"
+anchor_bottom = 0.45
+color = Color(1, 1, 1, 0.4)
 
 [node name="PauseButton" type="Button" parent="."]
 anchor_left = 1.0
@@ -144,15 +102,64 @@ offset_bottom = 86.0
 theme_override_font_sizes/font_size = 26
 text = "||"
 
+[node name="CoinLabel" type="Label" parent="."]
+anchor_left = 1.0
+anchor_top = 0.0
+anchor_right = 1.0
+anchor_bottom = 0.0
+offset_left = -160.0
+offset_top = 92.0
+offset_right = -16.0
+offset_bottom = 122.0
+theme_override_font_sizes/font_size = 26
+theme_override_colors/font_color = Color(0.95, 0.8, 0.2, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 0.85)
+theme_override_constants/outline_size = 5
+horizontal_alignment = 2
+text = "0"
+
+[node name="LivesLabel" type="Label" parent="."]
+anchor_left = 1.0
+anchor_top = 0.0
+anchor_right = 1.0
+anchor_bottom = 0.0
+offset_left = -160.0
+offset_top = 124.0
+offset_right = -16.0
+offset_bottom = 150.0
+theme_override_font_sizes/font_size = 20
+theme_override_colors/font_color = Color(0.95, 0.25, 0.3, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1.0)
+theme_override_constants/outline_size = 4
+horizontal_alignment = 2
+text = "❤❤❤"
+
+[node name="SeasonLabel" type="Label" parent="."]
+anchor_left = 1.0
+anchor_top = 0.0
+anchor_right = 1.0
+anchor_bottom = 0.0
+offset_left = -160.0
+offset_top = 154.0
+offset_right = -16.0
+offset_bottom = 172.0
+theme_override_font_sizes/font_size = 13
+theme_override_colors/font_color = Color(0.8, 0.82, 0.88, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 0.85)
+theme_override_constants/outline_size = 3
+horizontal_alignment = 2
+vertical_alignment = 1
+text = ""
+
 [node name="ChargeLabel" type="Label" parent="."]
 anchor_left = 0.0
 anchor_top = 0.0
 anchor_right = 0.0
 anchor_bottom = 0.0
 offset_left = 20.0
-offset_top = 172.0
+offset_top = 240.0
 offset_right = 260.0
-offset_bottom = 194.0
+offset_bottom = 262.0
 theme_override_font_sizes/font_size = 15
 theme_override_colors/font_color = Color(0.85, 0.85, 0.9, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 0.85)

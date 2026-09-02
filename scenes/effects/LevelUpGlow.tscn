@@ -3,4 +3,5 @@
 [ext_resource type="Script" path="res://scripts/effects/LevelUpGlow.gd" id="1"]
 
 [node name="LevelUpGlow" type="Node2D"]
+process_mode = 3
 script = ExtResource("1")

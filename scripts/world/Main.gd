@@ -148,9 +148,12 @@ const BASE_MAX_LIVES: int = 3
 # Player Level: a uniform, height-only progression, separate from Season —
 # +1 level every 50m climbed, uncapped, recomputed live from current height
 # (so it can dip if the player falls, then grows back on re-climb). Each
-# level adds a flat 5% to jump force via Player.level_jump_mult.
+# level adds a flat 5% to jump force via Player.level_jump_mult, capped at
+# +25% total (level 6+) so it can't snowball and break late-game balance —
+# the Level number itself keeps climbing uncapped, only the jump bonus caps.
 const LEVEL_METERS: float = 50.0
 const JUMP_LEVEL_BONUS: float = 0.05
+const MAX_JUMP_LEVEL_BONUS: float = 0.25
 const LEVEL_UP_INVULN_TIME: float = 1.0
 const LEVEL_UP_SHAKE_STRENGTH: float = 7.0
 const LEVEL_UP_SHAKE_DURATION: float = 0.35
@@ -310,7 +313,7 @@ func _ready() -> void:
 	var initial_height: float = max(0.0, start_y - player.global_position.y) / PIXELS_PER_METER
 	max_level_reached = _get_player_level(initial_height)
 	player_level = max_level_reached
-	player.level_jump_mult = 1.0 + (player_level - 1) * JUMP_LEVEL_BONUS
+	player.level_jump_mult = _level_jump_mult(player_level)
 	level_up_popup.bonus_text = "Jump +%d%%" % int(round(JUMP_LEVEL_BONUS * 100.0))
 
 	spawn_protection_timer = SPAWN_PROTECTION_TIME
@@ -465,6 +468,12 @@ func _get_player_level(height: float) -> int:
 	return int(max(height, 0.0) / LEVEL_METERS) + 1
 
 
+# Capped at MAX_JUMP_LEVEL_BONUS (level 6+) so the bonus can't snowball and
+# break late-game balance — the Level number itself is never capped.
+func _level_jump_mult(level: int) -> float:
+	return 1.0 + min((level - 1) * JUMP_LEVEL_BONUS, MAX_JUMP_LEVEL_BONUS)
+
+
 # Player Level tracks CURRENT height live (dips if the player falls, grows
 # back on re-climb) so jump force always matches the formula in the spec.
 # max_level_reached is a separate run-scoped ratchet used only to gate the
@@ -476,12 +485,13 @@ func _update_player_level(height: float) -> void:
 		max_level_reached = level
 		_on_player_level_up(level)
 	player_level = level
-	player.level_jump_mult = 1.0 + (player_level - 1) * JUMP_LEVEL_BONUS
+	player.level_jump_mult = _level_jump_mult(player_level)
 	hud.set_level_progress(player_level, fmod(max(height, 0.0), LEVEL_METERS) / LEVEL_METERS)
 
 
 func _on_player_level_up(level: int) -> void:
-	level_up_popup.show_level_up(level)
+	var at_jump_cap: bool = is_equal_approx(_level_jump_mult(level), 1.0 + MAX_JUMP_LEVEL_BONUS)
+	level_up_popup.show_level_up(level, at_jump_cap)
 	AudioManager.play("level_up")
 	_spawn_level_up_glow(player.global_position)
 	_spawn_level_up_ring(player.global_position)
