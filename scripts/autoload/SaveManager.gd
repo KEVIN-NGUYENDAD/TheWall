@@ -8,10 +8,10 @@ const SAVE_PATH: String = "user://savegame.json"
 
 const SKINS: Dictionary = {
 	"default": {"name": "Default", "color": Color(0.2, 0.6, 0.95), "cost": 0},
-	"sunset": {"name": "Sunset", "color": Color(0.95, 0.45, 0.2), "cost": 50},
-	"forest": {"name": "Forest", "color": Color(0.25, 0.75, 0.35), "cost": 100},
-	"royal": {"name": "Royal", "color": Color(0.6, 0.3, 0.9), "cost": 200},
-	"gold": {"name": "Gold", "color": Color(0.95, 0.8, 0.2), "cost": 400},
+	"red": {"name": "Red", "color": Color(0.9, 0.15, 0.15), "cost": 25},
+	"yellow": {"name": "Yellow", "color": Color(0.95, 0.85, 0.2), "cost": 50},
+	"purple": {"name": "Purple", "color": Color(0.6, 0.3, 0.9), "cost": 100},
+	"neon": {"name": "Neon", "color": Color(0.2, 1.0, 0.45), "cost": 200},
 }
 
 const ACHIEVEMENTS: Dictionary = {
@@ -51,6 +51,8 @@ func _default_data() -> Dictionary:
 		"current_season": "Spring",
 		"total_coins": 0,
 		"total_play_time": 0.0,
+		"difficulty": "MEDIUM",
+		"inventory": {"extra_life": 0, "safe_shield": 0},
 		"unlocked_skins": ["default"],
 		"selected_skin": "default",
 		"achievements": {},
@@ -90,6 +92,9 @@ func _merge_defaults(parsed: Dictionary) -> void:
 	for key in defaults.stats:
 		if not parsed.stats.has(key):
 			parsed.stats[key] = defaults.stats[key]
+	for key in defaults.inventory:
+		if not parsed.inventory.has(key):
+			parsed.inventory[key] = defaults.inventory[key]
 
 
 func save_game() -> void:
@@ -171,14 +176,47 @@ func set_player_name(new_name: String) -> void:
 	save_game()
 
 
+# Single source of truth for "where Continue resumes" — used identically by
+# automatic checkpoint activation and the explicit Save Position action, so
+# the two are always consistent with each other. A direct overwrite (not a
+# max/ratchet) so an explicit Save Position always means exactly what it
+# says, even if it's below a checkpoint reached earlier in the run.
 func record_progress(checkpoint_height: float, level: int, season: String) -> void:
-	data.checkpoint_height = max(data.checkpoint_height, checkpoint_height)
+	data.checkpoint_height = checkpoint_height
 	data.current_level = level
 	data.current_season = season
 
 
 func add_play_time(delta: float) -> void:
 	data.total_play_time += delta
+
+
+func set_difficulty(difficulty: String) -> void:
+	data.difficulty = difficulty
+	save_game()
+
+
+func spend_coins(amount: int) -> bool:
+	if data.total_coins < amount:
+		return false
+	data.total_coins -= amount
+	coins_changed.emit(data.total_coins)
+	data_changed.emit()
+	save_game()
+	return true
+
+
+func add_inventory_item(item: String, count: int = 1) -> void:
+	data.inventory[item] = data.inventory.get(item, 0) + count
+	save_game()
+
+
+func use_inventory_item(item: String) -> bool:
+	if data.inventory.get(item, 0) <= 0:
+		return false
+	data.inventory[item] -= 1
+	save_game()
+	return true
 
 
 func unlock_skin(id: String) -> bool:

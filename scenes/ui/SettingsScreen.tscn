@@ -45,6 +45,28 @@ custom_minimum_size = Vector2(0, 12)
 custom_minimum_size = Vector2(260, 56)
 text = "Change Name"
 
+[node name="DifficultyLabel" type="Label" parent="CenterContainer/VBoxContainer"]
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 16
+theme_override_colors/font_color = Color(0.9, 0.92, 0.98, 1)
+text = "Difficulty: MEDIUM"
+
+[node name="DifficultyRow" type="HBoxContainer" parent="CenterContainer/VBoxContainer"]
+alignment = 1
+theme_override_constants/separation = 10
+
+[node name="EasyButton" type="Button" parent="CenterContainer/VBoxContainer/DifficultyRow"]
+custom_minimum_size = Vector2(80, 48)
+text = "Easy"
+
+[node name="MediumButton" type="Button" parent="CenterContainer/VBoxContainer/DifficultyRow"]
+custom_minimum_size = Vector2(80, 48)
+text = "Medium"
+
+[node name="HardButton" type="Button" parent="CenterContainer/VBoxContainer/DifficultyRow"]
+custom_minimum_size = Vector2(80, 48)
+text = "Hard"
+
 [node name="SkinsButton" type="Button" parent="CenterContainer/VBoxContainer"]
 custom_minimum_size = Vector2(260, 56)
 text = "Skins"
@@ -62,6 +84,9 @@ custom_minimum_size = Vector2(260, 56)
 text = "Back"
 
 [connection signal="pressed" from="CenterContainer/VBoxContainer/ChangeNameButton" to="." method="_on_change_name_pressed"]
+[connection signal="pressed" from="CenterContainer/VBoxContainer/DifficultyRow/EasyButton" to="." method="_on_easy_pressed"]
+[connection signal="pressed" from="CenterContainer/VBoxContainer/DifficultyRow/MediumButton" to="." method="_on_medium_pressed"]
+[connection signal="pressed" from="CenterContainer/VBoxContainer/DifficultyRow/HardButton" to="." method="_on_hard_pressed"]
 [connection signal="pressed" from="CenterContainer/VBoxContainer/SkinsButton" to="." method="_on_skins_pressed"]
 [connection signal="pressed" from="CenterContainer/VBoxContainer/StatsButton" to="." method="_on_stats_pressed"]
 [connection signal="pressed" from="CenterContainer/VBoxContainer/QuitButton" to="." method="_on_quit_pressed"]

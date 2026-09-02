@@ -3,6 +3,7 @@ extends Area2D
 # Represents the Eagle hazard: telegraphs a dive, then on contact costs the
 # player coins rather than causing knockback or death.
 signal hit_player
+signal telegraph_started
 
 const TELEGRAPH_TIME: float = 0.7
 const DIVE_SPEED: float = 340.0
@@ -27,6 +28,7 @@ func _ready() -> void:
 
 func begin_telegraph(target: Node2D) -> void:
 	_target = target
+	telegraph_started.emit()
 
 
 func _process(delta: float) -> void:

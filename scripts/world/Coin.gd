@@ -3,11 +3,11 @@ extends Area2D
 signal collected
 
 const RADIUS: float = 12.0
-const GEM_COLOR: Color = Color(0.35, 0.85, 0.95, 1.0)
-const GEM_DARK: Color = Color(0.2, 0.55, 0.85, 1.0)
-const FACET_COLOR: Color = Color(0.85, 1.0, 1.0, 0.8)
-const GLOW_COLOR: Color = Color(0.5, 0.9, 1.0, 0.5)
-const SPARKLE_COLOR: Color = Color(1.0, 1.0, 1.0, 1.0)
+const GEM_COLOR: Color = Color(1.0, 0.82, 0.15, 1.0)
+const GEM_DARK: Color = Color(0.75, 0.55, 0.05, 1.0)
+const FACET_COLOR: Color = Color(1.0, 0.95, 0.75, 0.9)
+const GLOW_COLOR: Color = Color(1.0, 0.85, 0.3, 0.55)
+const SPARKLE_COLOR: Color = Color(1.0, 1.0, 0.9, 1.0)
 
 var is_collected: bool = false
 var _t: float = randf() * TAU

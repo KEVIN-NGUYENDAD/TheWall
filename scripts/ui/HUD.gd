@@ -1,5 +1,8 @@
 extends CanvasLayer
 
+signal save_position_requested
+signal shop_requested
+
 const CHARGE_LOW_COLOR: Color = Color(0.3, 0.85, 0.4)
 const CHARGE_MID_COLOR: Color = Color(0.95, 0.85, 0.2)
 const CHARGE_HIGH_COLOR: Color = Color(0.95, 0.3, 0.25)
@@ -71,6 +74,16 @@ func _on_resume_pressed() -> void:
 	AudioManager.play("click")
 	get_tree().paused = false
 	pause_overlay.visible = false
+
+
+func _on_save_position_pressed() -> void:
+	AudioManager.play("click")
+	save_position_requested.emit()
+
+
+func _on_shop_pressed() -> void:
+	AudioManager.play("click")
+	shop_requested.emit()
 
 
 func _on_menu_pressed() -> void:

@@ -12,6 +12,7 @@ const COIN_SCENE: PackedScene = preload("res://scenes/world/Coin.tscn")
 const SPIKE_SCENE: PackedScene = preload("res://scenes/world/Spike.tscn")
 const DEATH_MARKER_SCENE: PackedScene = preload("res://scenes/world/DeathMarker.tscn")
 const PARTICLE_BURST_SCENE: PackedScene = preload("res://scenes/effects/ParticleBurst.tscn")
+const FLOATING_TEXT_SCENE: PackedScene = preload("res://scenes/effects/FloatingText.tscn")
 const NEST_SCENE: PackedScene = preload("res://scenes/world/Nest.tscn")
 const COMMON_BIRD_SCENE: PackedScene = preload("res://scenes/world/CommonBird.tscn")
 const WHITE_BIRD_SCENE: PackedScene = preload("res://scenes/world/WhiteBird.tscn")
@@ -37,6 +38,7 @@ const COIN_CHANCE: float = 0.45
 const SPIKE_CHANCE: float = 0.1
 const NEAR_MISS_METERS: float = 5.0
 const EAGLE_MIN_HEIGHT_M: float = 100.0
+const COMMON_BIRD_SCALE: float = 1.4
 const NEST_CHANCE: float = 0.04
 
 # Onboarding safe zone: no hazards, no death, no death markers below this height.
@@ -69,6 +71,17 @@ const THUNDER_INTERVAL_MIN: float = 6.0
 const THUNDER_INTERVAL_MAX: float = 14.0
 const FLOWER_CHANCE: float = 0.2
 
+# Difficulty modes: multipliers applied on top of the base level curve.
+const DIFFICULTY_TRAP_MULT: Dictionary = {"EASY": 0.4, "MEDIUM": 1.0, "HARD": 1.8}
+const DIFFICULTY_HAZARD_MULT: Dictionary = {"EASY": 0.65, "MEDIUM": 1.0, "HARD": 1.4}
+const DIFFICULTY_GAP_MULT: Dictionary = {"EASY": 0.85, "MEDIUM": 1.0, "HARD": 1.15}
+const DIFFICULTY_BIRD_INTERVAL_MULT: Dictionary = {"EASY": 0.6, "MEDIUM": 1.0, "HARD": 1.6}
+const DIFFICULTY_EAGLE_CHANCE_MULT: Dictionary = {"EASY": 0.5, "MEDIUM": 1.0, "HARD": 1.6}
+
+# Coin-reward power-ups (Shop).
+const BUFF_DURATION: float = 30.0
+const JUMP_BOOST_MULT: float = 1.25
+
 const MEMORY_HEIGHTS: Array = [100, 300, 700, 1500]
 const MEMORY_TEXTS: Dictionary = {
 	100: "Someone climbed before you.",
@@ -79,6 +92,11 @@ const MEMORY_TEXTS: Dictionary = {
 
 const CHECKPOINT_SHAKE_STRENGTH: float = 4.0
 const CHECKPOINT_SHAKE_DURATION: float = 0.25
+const EAGLE_SHAKE_STRENGTH: float = 2.5
+const EAGLE_SHAKE_DURATION: float = 0.2
+
+const COIN_TEXT_COLOR: Color = Color(0.95, 0.85, 0.2, 1)
+const EAGLE_TEXT_COLOR: Color = Color(0.95, 0.25, 0.2, 1)
 
 const MARKER_MERGE_DISTANCE_M: float = 8.0
 
@@ -119,6 +137,7 @@ const CLOUD_DRIFT_RANGE: float = 620.0
 @onready var wind_layer: Node2D = $WindLayer
 @onready var season_banner = $SeasonBanner
 @onready var thunder_flash = $ThunderFlash
+@onready var shop_screen = $ShopScreen
 
 @onready var mountains: Array = [
 	$ParallaxBackground/Far/Mountain1, $ParallaxBackground/Far/Mountain2,
@@ -146,6 +165,10 @@ var bonus_height_m: float = 0.0
 var cloud_drift_t: float = 0.0
 var spawn_protection_timer: float = 0.0
 var current_level_idx: int = -1
+var difficulty: String = "MEDIUM"
+
+var ice_grip_active: bool = false
+var weather_blessing_active: bool = false
 
 var common_bird_timer: Timer
 var special_bird_timer: Timer
@@ -153,14 +176,21 @@ var predator_timer: Timer
 var feather_timer: Timer
 var weather_timer: Timer
 var thunder_timer: Timer
+var jump_boost_timer: Timer
+var ice_grip_timer: Timer
+var weather_blessing_timer: Timer
 
 
 func _ready() -> void:
 	randomize()
+	difficulty = SaveManager.data.difficulty
 	death_screen.respawn_requested.connect(_on_respawn_requested)
 	death_screen.menu_requested.connect(_on_menu_requested)
 	player.landed_hard.connect(_on_player_landed_hard)
 	player.dashed.connect(_on_player_dashed)
+	hud.save_position_requested.connect(_on_save_position_requested)
+	hud.shop_requested.connect(_on_shop_requested)
+	shop_screen.item_purchased.connect(_on_item_purchased)
 
 	var top_y: float = _generate_platforms()
 	player.global_position = spawn_position
@@ -199,7 +229,8 @@ func _generate_platforms() -> float:
 				_spawn_spike(Vector2(x, y))
 
 		if i < PLATFORM_COUNT - 1:
-			y -= randf_range(MIN_GAP, MAX_GAP)
+			var gap_mult: float = DIFFICULTY_GAP_MULT.get(difficulty, 1.0)
+			y -= randf_range(MIN_GAP, MAX_GAP) * gap_mult
 			x = randf_range(EDGE_MARGIN, VIEWPORT_WIDTH - EDGE_MARGIN)
 
 	return y
@@ -219,9 +250,11 @@ func _spawn_platform_variant(i: int, x: float, y: float, height: float) -> Dicti
 
 	if i > 0 and height >= SAFE_ZONE_HEIGHT_M:
 		var level_idx: int = _get_level_index(height)
-		var moving_chance: float = LEVEL_MOVING_CHANCE[level_idx]
-		var collapsing_chance: float = LEVEL_COLLAPSING_CHANCE[level_idx]
-		var trap_chance: float = LEVEL_TRAP_CHANCE[level_idx]
+		var hazard_mult: float = DIFFICULTY_HAZARD_MULT.get(difficulty, 1.0)
+		var trap_mult: float = DIFFICULTY_TRAP_MULT.get(difficulty, 1.0)
+		var moving_chance: float = clamp(LEVEL_MOVING_CHANCE[level_idx] * hazard_mult, 0.0, 0.9)
+		var collapsing_chance: float = clamp(LEVEL_COLLAPSING_CHANCE[level_idx] * hazard_mult, 0.0, 0.9)
+		var trap_chance: float = clamp(LEVEL_TRAP_CHANCE[level_idx] * trap_mult, 0.0, 0.9)
 
 		var roll: float = randf()
 		if roll < FAKE_PLATFORM_CHANCE:
@@ -241,6 +274,9 @@ func _spawn_platform_variant(i: int, x: float, y: float, height: float) -> Dicti
 	platform.position = Vector2(x, y)
 	add_child(platform)
 	platform.modulate = SEASON_PLATFORM_MODULATE[_get_level_index(height)]
+
+	if ptype == "trap":
+		platform.player_hit.connect(_on_trap_hit)
 
 	if ptype == "normal":
 		if i > 0 and height >= SAFE_ZONE_HEIGHT_M and randf() < NEST_CHANCE:
@@ -279,7 +315,6 @@ func _check_zone_transition(height: float) -> void:
 	var zone: int = _get_zone_for_height(height)
 	if zone != current_zone:
 		current_zone = zone
-		MusicManager.set_zone(zone)
 		AudioManager.play("area_discovery")
 
 		var target_sky: Color = ZONE_SKY_COLORS[zone]
@@ -295,8 +330,6 @@ func _check_zone_transition(height: float) -> void:
 		for c in clouds:
 			tween.tween_property(c, "color", ZONE_CLOUD_COLORS[zone], ZONE_TRANSITION_TIME)
 
-	MusicManager.set_intensity(_zone_progress(height, zone))
-
 
 func _check_season_transition(height: float) -> void:
 	var level_idx: int = _get_level_index(height)
@@ -305,16 +338,29 @@ func _check_season_transition(height: float) -> void:
 
 	var is_first: bool = current_level_idx == -1
 	current_level_idx = level_idx
-	player.ground_friction_mult = SEASON_FRICTION_MULT[level_idx]
+	_recompute_friction()
+	MusicManager.play_season(level_idx)
 
 	var interval: float = WEATHER_INTERVAL.get(level_idx, 0.0)
-	if interval > 0.0:
+	if interval > 0.0 and not weather_blessing_active:
 		_restart_timer(weather_timer, interval, interval * 1.6)
-	if level_idx == 4:
+	if level_idx == 4 and not weather_blessing_active:
 		_restart_timer(thunder_timer, THUNDER_INTERVAL_MIN, THUNDER_INTERVAL_MAX)
 
 	if not is_first:
 		season_banner.show_season(SEASON_NAMES[level_idx])
+
+
+# Combines the base season friction with any active buffs. Called whenever
+# either the season or a buff's active state changes, so nothing can stomp
+# on a value another system just set.
+func _recompute_friction() -> void:
+	if ice_grip_active or weather_blessing_active:
+		player.ground_friction_mult = 1.0
+	elif current_level_idx >= 0:
+		player.ground_friction_mult = SEASON_FRICTION_MULT[current_level_idx]
+	else:
+		player.ground_friction_mult = 1.0
 
 
 func _set_sky_color(color: Color) -> void:
@@ -353,8 +399,11 @@ func _spawn_nest(pos: Vector2) -> void:
 
 func _on_nest_discovered(nest: Node2D) -> void:
 	AudioManager.play("chirp")
-	_spawn_common_bird_from(nest.global_position, -1.0)
-	_spawn_common_bird_from(nest.global_position, 1.0)
+	# Deferred: this runs from inside an Area2D body_entered callback (physics
+	# query flush), and instancing a new collision shape synchronously there
+	# throws "Can't change this state while flushing queries."
+	call_deferred("_spawn_common_bird_from", nest.global_position, -1.0)
+	call_deferred("_spawn_common_bird_from", nest.global_position, 1.0)
 
 
 func _generate_checkpoints(top_y: float) -> void:
@@ -380,19 +429,14 @@ func _apply_continue_checkpoint() -> void:
 	if target_height <= 0.0:
 		return
 
-	var best_checkpoint: Node = null
 	for checkpoint in checkpoints:
 		if float(checkpoint.height_meters) <= target_height:
-			if best_checkpoint == null or checkpoint.height_meters > best_checkpoint.height_meters:
-				best_checkpoint = checkpoint
-	if best_checkpoint == null:
-		return
+			checkpoint.is_active = true
 
-	best_checkpoint.is_active = true
-	var pos: Vector2 = Vector2(VIEWPORT_WIDTH / 2.0, best_checkpoint.global_position.y - 20.0)
+	var pos: Vector2 = Vector2(VIEWPORT_WIDTH / 2.0, spawn_position.y - target_height * PIXELS_PER_METER - 20.0)
 	player.global_position = pos
 	current_checkpoint_position = pos
-	current_checkpoint_height = float(best_checkpoint.height_meters)
+	current_checkpoint_height = target_height
 
 
 func _spawn_recorded_death_markers() -> void:
@@ -427,6 +471,14 @@ func _spawn_particle_burst(pos: Vector2, color: Color, count: int, speed: float,
 	add_child(burst)
 
 
+func _spawn_floating_text(pos: Vector2, text: String, color: Color) -> void:
+	var ft: Node2D = FLOATING_TEXT_SCENE.instantiate()
+	ft.text = text
+	ft.text_color = color
+	ft.position = pos
+	add_child(ft)
+
+
 func _setup_camera(top_y: float) -> void:
 	camera.limit_left = 0
 	camera.limit_right = int(VIEWPORT_WIDTH)
@@ -439,13 +491,13 @@ func _setup_ambience_timers() -> void:
 	common_bird_timer.one_shot = true
 	add_child(common_bird_timer)
 	common_bird_timer.timeout.connect(_on_common_bird_timer)
-	_restart_timer(common_bird_timer, 2.5, 5.0)
+	_restart_bird_timer(common_bird_timer, 2.5, 5.0)
 
 	special_bird_timer = Timer.new()
 	special_bird_timer.one_shot = true
 	add_child(special_bird_timer)
 	special_bird_timer.timeout.connect(_on_special_bird_timer)
-	_restart_timer(special_bird_timer, 15.0, 25.0)
+	_restart_bird_timer(special_bird_timer, 15.0, 25.0)
 
 	predator_timer = Timer.new()
 	predator_timer.one_shot = true
@@ -469,9 +521,29 @@ func _setup_ambience_timers() -> void:
 	add_child(thunder_timer)
 	thunder_timer.timeout.connect(_on_thunder_timer)
 
+	jump_boost_timer = Timer.new()
+	jump_boost_timer.one_shot = true
+	add_child(jump_boost_timer)
+	jump_boost_timer.timeout.connect(_on_jump_boost_expired)
+
+	ice_grip_timer = Timer.new()
+	ice_grip_timer.one_shot = true
+	add_child(ice_grip_timer)
+	ice_grip_timer.timeout.connect(_on_ice_grip_expired)
+
+	weather_blessing_timer = Timer.new()
+	weather_blessing_timer.one_shot = true
+	add_child(weather_blessing_timer)
+	weather_blessing_timer.timeout.connect(_on_weather_blessing_expired)
+
 
 func _restart_timer(t: Timer, min_s: float, max_s: float) -> void:
 	t.start(randf_range(min_s, max_s))
+
+
+func _restart_bird_timer(t: Timer, min_s: float, max_s: float) -> void:
+	var mult: float = DIFFICULTY_BIRD_INTERVAL_MULT.get(difficulty, 1.0)
+	t.start(randf_range(min_s, max_s) * mult)
 
 
 func _bird_spawn_position(from_left: bool) -> Vector2:
@@ -485,6 +557,7 @@ func _spawn_common_bird_from(pos: Vector2, direction: float) -> void:
 	var bird: Area2D = COMMON_BIRD_SCENE.instantiate()
 	bird.position = pos
 	bird.direction = direction
+	bird.scale = Vector2(COMMON_BIRD_SCALE, COMMON_BIRD_SCALE)
 	add_child(bird)
 	bird.collected.connect(_on_common_bird_collected.bind(bird))
 
@@ -493,13 +566,14 @@ func _on_common_bird_collected(bird: Node2D) -> void:
 	SaveManager.add_coins(1)
 	AudioManager.play("chirp")
 	_spawn_particle_burst(bird.global_position, Color(1.0, 0.9, 0.4, 0.9), 10, 130.0, 0.4)
+	_spawn_floating_text(bird.global_position, "+1 COIN", COIN_TEXT_COLOR)
 
 
 func _on_common_bird_timer() -> void:
 	if not is_dead:
 		var from_left: bool = randf() < 0.5
 		_spawn_common_bird_from(_bird_spawn_position(from_left), 1.0 if from_left else -1.0)
-	_restart_timer(common_bird_timer, 2.5, 5.0)
+	_restart_bird_timer(common_bird_timer, 2.5, 5.0)
 
 
 func _on_special_bird_timer() -> void:
@@ -509,7 +583,7 @@ func _on_special_bird_timer() -> void:
 			_spawn_shadow_bird()
 		elif roll < 0.3:
 			_spawn_white_bird()
-	_restart_timer(special_bird_timer, 15.0, 25.0)
+	_restart_bird_timer(special_bird_timer, 15.0, 25.0)
 
 
 func _spawn_white_bird() -> void:
@@ -531,7 +605,8 @@ func _spawn_shadow_bird() -> void:
 func _on_predator_timer() -> void:
 	if not is_dead:
 		var height: float = max(0.0, start_y - player.global_position.y) / PIXELS_PER_METER
-		if height >= EAGLE_MIN_HEIGHT_M and randf() < 0.5:
+		var chance: float = clamp(0.5 * DIFFICULTY_EAGLE_CHANCE_MULT.get(difficulty, 1.0), 0.0, 0.95)
+		if height >= EAGLE_MIN_HEIGHT_M and randf() < chance:
 			_spawn_predator_bird()
 	_restart_timer(predator_timer, 30.0, 45.0)
 
@@ -542,6 +617,7 @@ func _spawn_predator_bird() -> void:
 	bird.position = _bird_spawn_position(from_left)
 	add_child(bird)
 	bird.hit_player.connect(_on_eagle_hit)
+	bird.telegraph_started.connect(func(): AudioManager.play("eagle"))
 	bird.begin_telegraph(player)
 
 
@@ -551,6 +627,8 @@ func _on_eagle_hit() -> void:
 	SaveManager.remove_coins(3)
 	AudioManager.play("eagle")
 	hud.show_toast("Eagle stole 3 coins!")
+	_spawn_floating_text(player.global_position, "-3 COINS", EAGLE_TEXT_COLOR)
+	player.shake_camera(EAGLE_SHAKE_STRENGTH, EAGLE_SHAKE_DURATION)
 
 
 func _on_white_bird_collected(bonus: float) -> void:
@@ -573,9 +651,10 @@ func _spawn_feather() -> void:
 
 
 func _on_weather_timer() -> void:
+	var effective_level: int = 0 if weather_blessing_active else current_level_idx
 	if not is_dead:
-		_spawn_weather_particle(current_level_idx)
-	var interval: float = WEATHER_INTERVAL.get(current_level_idx, 0.0)
+		_spawn_weather_particle(effective_level)
+	var interval: float = WEATHER_INTERVAL.get(effective_level, 0.0)
 	if interval > 0.0:
 		_restart_timer(weather_timer, interval, interval * 1.6)
 
@@ -606,7 +685,7 @@ func _spawn_weather_particle(level_idx: int) -> void:
 
 
 func _on_thunder_timer() -> void:
-	if not is_dead and current_level_idx == 4:
+	if not is_dead and current_level_idx == 4 and not weather_blessing_active:
 		thunder_flash.flash()
 		_restart_timer(thunder_timer, THUNDER_INTERVAL_MIN, THUNDER_INTERVAL_MAX)
 
@@ -671,6 +750,13 @@ func _on_spike_hit() -> void:
 	_die(height)
 
 
+func _on_trap_hit() -> void:
+	if is_dead or spawn_protection_timer > 0.0:
+		return
+	var height: float = max(0.0, start_y - player.global_position.y) / PIXELS_PER_METER
+	_die(height)
+
+
 func _on_player_landed_hard(land_position: Vector2) -> void:
 	AudioManager.play("landing")
 	_spawn_particle_burst(land_position, Color(0.75, 0.73, 0.7, 0.8), 8, 100.0, 0.35)
@@ -705,6 +791,22 @@ func _nearest_checkpoint_distance(height: float) -> float:
 
 
 func _die(height_reached: float) -> void:
+	if SaveManager.use_inventory_item("extra_life"):
+		hud.show_toast("Extra Life used!")
+		player.global_position = current_checkpoint_position
+		player.velocity = Vector2.ZERO
+		player.reset_charge()
+		spawn_protection_timer = SPAWN_PROTECTION_TIME
+		return
+
+	if SaveManager.use_inventory_item("safe_shield"):
+		hud.show_toast("Safe Shield used!")
+		player.global_position = current_checkpoint_position
+		player.velocity = Vector2.ZERO
+		player.reset_charge()
+		spawn_protection_timer = SPAWN_PROTECTION_TIME
+		return
+
 	is_dead = true
 
 	var lost_meters: float = max(0.0, height_reached - current_checkpoint_height)
@@ -729,6 +831,63 @@ func _on_respawn_requested() -> void:
 	player.velocity = Vector2.ZERO
 	player.reset_charge()
 	spawn_protection_timer = SPAWN_PROTECTION_TIME
+
+
+func _on_save_position_requested() -> void:
+	if is_dead:
+		return
+	var height: float = max(0.0, start_y - player.global_position.y) / PIXELS_PER_METER + bonus_height_m
+	var level_idx: int = _get_level_index(height)
+	# Update the same in-run respawn point a checkpoint would, so an
+	# immediate death this run and a future Continue both agree with
+	# whatever Save Position just recorded.
+	current_checkpoint_position = player.global_position
+	current_checkpoint_height = height
+	SaveManager.record_progress(height, level_idx + 1, SEASON_NAMES[level_idx])
+	SaveManager.save_game()
+	hud.show_toast("Position Saved")
+
+
+func _on_shop_requested() -> void:
+	shop_screen.open()
+
+
+func _on_item_purchased(item_id: String) -> void:
+	match item_id:
+		"extra_life":
+			SaveManager.add_inventory_item("extra_life", 1)
+			hud.show_toast("Extra Life added!")
+		"safe_shield":
+			SaveManager.add_inventory_item("safe_shield", 1)
+			hud.show_toast("Safe Shield added!")
+		"jump_boost":
+			player.jump_boost_mult = JUMP_BOOST_MULT
+			_restart_timer(jump_boost_timer, BUFF_DURATION, BUFF_DURATION)
+			hud.show_toast("Jump Boost active for 30s!")
+		"ice_grip":
+			ice_grip_active = true
+			_recompute_friction()
+			_restart_timer(ice_grip_timer, BUFF_DURATION, BUFF_DURATION)
+			hud.show_toast("Ice Grip active for 30s!")
+		"weather_blessing":
+			weather_blessing_active = true
+			_recompute_friction()
+			_restart_timer(weather_blessing_timer, BUFF_DURATION, BUFF_DURATION)
+			hud.show_toast("Weather Blessing active for 30s!")
+
+
+func _on_jump_boost_expired() -> void:
+	player.jump_boost_mult = 1.0
+
+
+func _on_ice_grip_expired() -> void:
+	ice_grip_active = false
+	_recompute_friction()
+
+
+func _on_weather_blessing_expired() -> void:
+	weather_blessing_active = false
+	_recompute_friction()
 
 
 func _on_menu_requested() -> void:

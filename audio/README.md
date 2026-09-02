@@ -15,21 +15,27 @@ Drop files in with these exact names and Godot will pick them up automatically
 
 ## Music (`audio/music/`) — real tracks in use
 
+One track plays per **season** (not per zone) — only 3 real files exist, so
+adjacent seasons share a track for a clear 3-act arc across the climb:
+
 | File | Used for |
 |---|---|
 | `velariomusic-happy-vibes-591803.mp3` | Menu |
-| `the_mountain-happy-happy-music-496549.mp3` | The Ruins (0–100m) |
-| `jorisvermeer-happy-adventure-quest-572050.mp3` | The Sky (100–500m) |
-| `the_mountain-fantasy-quest-184140.mp3` | The Void (500m+) |
+| `the_mountain-happy-happy-music-496549.mp3` | Spring + Summer (0–300m) |
+| `jorisvermeer-happy-adventure-quest-572050.mp3` | Autumn (300–600m) |
+| `the_mountain-fantasy-quest-184140.mp3` | Winter + Storm (600m+) |
 
 These are the exact, unmodified filenames as sourced — do not rename them;
 `MusicManager`'s path constants reference them directly.
 
-The three zone tracks play simultaneously at all times during gameplay
-(silently, via volume, unless active) so they can crossfade smoothly. The
-menu track plays on its own dedicated player, independent of the zone
-crossfade, starting on `MainMenu` and stopping automatically when gameplay
-starts. `MusicManager` handles looping automatically for `.ogg`/`.mp3`/`.wav`.
+Only one season track plays at a time, on a ping-ponged pair of players, and
+the track only changes when the season actually changes (never mid-season,
+never on background zone-color transitions) — a 4-second crossfade plays
+between different tracks; moving between two seasons that share the same
+track continues seamlessly with no restart. The menu track plays on its own
+dedicated player, independent of season crossfading, starting on `MainMenu`
+and stopping automatically when gameplay starts. `MusicManager` handles
+looping automatically for `.ogg`/`.mp3`/`.wav`.
 
 ## SFX (`audio/sfx/`) — one-shot
 

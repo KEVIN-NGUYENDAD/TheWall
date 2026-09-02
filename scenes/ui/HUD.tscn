@@ -148,9 +148,9 @@ anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
 offset_left = -140.0
-offset_top = -120.0
+offset_top = -200.0
 offset_right = 140.0
-offset_bottom = 120.0
+offset_bottom = 200.0
 
 [node name="VBoxContainer" type="VBoxContainer" parent="PauseOverlay/Panel"]
 anchor_left = 0.0
@@ -173,6 +173,16 @@ custom_minimum_size = Vector2(0, 60)
 theme_override_font_sizes/font_size = 22
 text = "Resume"
 
+[node name="SavePositionButton" type="Button" parent="PauseOverlay/Panel/VBoxContainer"]
+custom_minimum_size = Vector2(0, 56)
+theme_override_font_sizes/font_size = 20
+text = "Save Position"
+
+[node name="ShopButton" type="Button" parent="PauseOverlay/Panel/VBoxContainer"]
+custom_minimum_size = Vector2(0, 56)
+theme_override_font_sizes/font_size = 20
+text = "Shop"
+
 [node name="MenuButton" type="Button" parent="PauseOverlay/Panel/VBoxContainer"]
 custom_minimum_size = Vector2(0, 56)
 theme_override_font_sizes/font_size = 20
@@ -180,5 +190,7 @@ text = "Main Menu"
 
 [connection signal="pressed" from="PauseButton" to="." method="_on_pause_pressed"]
 [connection signal="pressed" from="PauseOverlay/Panel/VBoxContainer/ResumeButton" to="." method="_on_resume_pressed"]
+[connection signal="pressed" from="PauseOverlay/Panel/VBoxContainer/SavePositionButton" to="." method="_on_save_position_pressed"]
+[connection signal="pressed" from="PauseOverlay/Panel/VBoxContainer/ShopButton" to="." method="_on_shop_pressed"]
 [connection signal="pressed" from="PauseOverlay/Panel/VBoxContainer/MenuButton" to="." method="_on_menu_pressed"]
 [connection signal="timeout" from="ToastTimer" to="." method="_on_toast_timeout"]
