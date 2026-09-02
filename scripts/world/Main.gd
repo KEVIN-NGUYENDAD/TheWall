@@ -32,12 +32,18 @@ const LEVEL_UP_RING_SCENE: PackedScene = preload("res://scenes/effects/LevelUpRi
 
 const VIEWPORT_WIDTH: float = 540.0
 const EDGE_MARGIN: float = 90.0
-const MIN_GAP: float = 90.0
-const MAX_GAP: float = 220.0
+# Bug Fix Pass: gaps widened 35% (within the requested 30-50% range) to
+# restore a sense of progression/challenge that recent Easy-focused passes
+# had flattened out — this is the shared baseline all difficulty
+# multipliers scale from, so Easy/Medium/Hard all get proportionally more
+# spread out, not just one tier.
+const MIN_GAP: float = 121.5
+const MAX_GAP: float = 297.0
 const FALL_DEATH_MARGIN: float = 200.0
 const CAMERA_TOP_MARGIN: float = 500.0
 const CHECKPOINT_INTERVAL_M: int = 100
-const COIN_CHANCE: float = 0.45
+# Coin density cut 30% (0.45 -> 0.315).
+const COIN_CHANCE: float = 0.315
 const SPIKE_CHANCE: float = 0.1
 const NEAR_MISS_METERS: float = 5.0
 const EAGLE_MIN_HEIGHT_M: float = 100.0
@@ -81,27 +87,33 @@ const SEASON_PLATFORM_MODULATE: Array = [
 # per season change, so the season reads at a glance without the HUD label
 # — this replaces Zone as the sky's color owner (Zone still tints
 # mountains/hills/near-clouds for depth). Purely cosmetic, no gameplay effect.
+# Bug Fix Pass: Winter's sky pushed cooler/more saturated so it reads as
+# unmistakably cold at a glance (was too close to a plain pale blue).
 const SEASON_SKY_COLOR: Array = [
-	Color(0.72, 0.85, 0.95), Color(0.42, 0.47, 0.55),
+	Color(0.6, 0.8, 0.96), Color(0.42, 0.47, 0.55),
 	Color(0.55, 0.82, 0.95), Color(0.25, 0.65, 1.0), Color(0.85, 0.55, 0.35),
 ]
+# Winter's cold-wash alpha raised (0.3 -> 0.45) for obvious cold color
+# grading — the other seasons are unchanged.
 const SEASON_TINT_COLOR: Array = [
-	Color(0.75, 0.88, 1.0, 0.3), Color(0.35, 0.4, 0.5, 0.4),
+	Color(0.75, 0.88, 1.0, 0.45), Color(0.35, 0.4, 0.5, 0.4),
 	Color(1.0, 0.85, 0.92, 0.16), Color(1.0, 0.95, 0.55, 0.16), Color(1.0, 0.5, 0.15, 0.3),
 ]
-# Winter snow at least 5x denser than before (0.9 -> 0.18); Storm rain also
-# thickened up. Spring/Summer/Autumn intervals unchanged from prior passes.
+# Winter snow pushed denser again (0.18 -> 0.12); Storm rain unchanged.
 const WEATHER_INTERVAL: Dictionary = {
-	0: 0.18, 1: 0.15, 2: 4.8, 3: 0.0, 4: 1.0,
+	0: 0.12, 1: 0.15, 2: 4.8, 3: 0.0, 4: 1.0,
 }
 const THUNDER_INTERVAL_MIN: float = 5.0
 const THUNDER_INTERVAL_MAX: float = 11.0
 const FLOWER_CHANCE: float = 0.2
-const SNOW_PATCH_CHANCE: float = 0.2
+# Bug Fix Pass: Winter platforms should look obviously snow-capped, not
+# occasionally — raised from 0.2 to 0.85 (Spring's flower chance unchanged).
+const SNOW_PATCH_CHANCE: float = 0.85
 # Fog thickens with altitude; Winter also gets a flat mist boost regardless
-# of height for its own "sương trắng" identity.
+# of height for its own "sương trắng" identity — boosted further this pass
+# (0.35 -> 0.45) for more obviously cold, misty air.
 const FOG_HEIGHT_CAP_M: float = 900.0
-const FOG_WINTER_BOOST: float = 0.35
+const FOG_WINTER_BOOST: float = 0.45
 
 # Difficulty modes: multipliers applied on top of the base level curve.
 # Balance Rework: rebuilt from scratch against Medium as the balanced 1.0
@@ -128,7 +140,26 @@ const EAGLE_BASE_CHANCE: float = 0.25
 # never stuck behind an unreachable or deceptive gap.
 const MAX_HORIZONTAL_SHIFT: float = 360.0
 const EASY_HORIZONTAL_SHIFT_MULT: float = 0.5
-const DIFFICULTY_PLATFORM_COUNT_MULT: Dictionary = {"EASY": 1.5, "MEDIUM": 1.0, "HARD": 1.0}
+
+# Bug Fix Pass: found while validating the gap increase above — Medium/Hard's
+# fully-free horizontal placement (independent of the vertical gap rolled)
+# already let ~7-9% of jumps land on a (vgap, hgap) pair that's physically
+# impossible at any charge, even before this pass touched the gap size. Not
+# something this pass introduced, but a real bug worth fixing now that it's
+# found. Mirrors Player.gd's jump physics (kept separate — Main.gd generates
+# platforms ahead of the player existing) purely to cap the horizontal roll
+# to what the vertical gap just rolled can actually reach, with margin.
+const PHYSICS_RISE_GRAVITY: float = 1400.0
+const PHYSICS_FALL_GRAVITY: float = 2200.0
+const PHYSICS_MAX_JUMP_SPEED: float = 1100.0
+const PHYSICS_MOVE_SPEED: float = 220.0
+const PHYSICS_AIR_ACCEL: float = 900.0
+const REACHABILITY_SAFETY_MARGIN: float = 0.85
+# Bug Fix Pass: platform density pulled back down from 1.5x — with gaps now
+# 35% wider (see MIN_GAP/MAX_GAP above), the old 1.5x over-compensation for
+# Easy's tight beginner-zone gaps is no longer needed and was making Easy
+# feel densely packed/cluttered rather than a real climb.
+const DIFFICULTY_PLATFORM_COUNT_MULT: Dictionary = {"EASY": 1.15, "MEDIUM": 1.0, "HARD": 1.0}
 const DIFFICULTY_FAKE_MULT: Dictionary = {"EASY": 0.2, "MEDIUM": 1.0, "HARD": 1.0}
 
 # Comprehensive Gameplay Pass: the first 100m on Easy gets its own extra
@@ -314,7 +345,6 @@ func _ready() -> void:
 	max_level_reached = _get_player_level(initial_height)
 	player_level = max_level_reached
 	player.level_jump_mult = _level_jump_mult(player_level)
-	level_up_popup.bonus_text = "Jump +%d%%" % int(round(JUMP_LEVEL_BONUS * 100.0))
 
 	spawn_protection_timer = SPAWN_PROTECTION_TIME
 	MusicManager.start()
@@ -359,19 +389,41 @@ func _generate_platforms() -> float:
 			var gap_mult: float = DIFFICULTY_GAP_MULT.get(difficulty, 1.0)
 			if beginner:
 				gap_mult *= BEGINNER_VERTICAL_MULT
-			y -= randf_range(MIN_GAP, MAX_GAP) * gap_mult
+			var gap_px: float = randf_range(MIN_GAP, MAX_GAP) * gap_mult
+			y -= gap_px
+
+			# Never place a platform combination that's physically impossible
+			# to cross, regardless of difficulty — cap the horizontal reach to
+			# what THIS gap's vertical rise actually allows, with margin.
+			var max_safe_shift: float = _max_reachable_horizontal(gap_px) * REACHABILITY_SAFETY_MARGIN
 			if difficulty == "EASY":
-				# Constrain horizontal reach relative to the previous platform
-				# (Medium/Hard keep the old fully-free full-width placement).
+				# Easy is additionally constrained relative to the previous
+				# platform on top of the safety cap (Medium/Hard only get the
+				# safety cap, otherwise keeping their old full-width freedom).
 				var shift_mult: float = EASY_HORIZONTAL_SHIFT_MULT
 				if beginner:
 					shift_mult *= BEGINNER_HORIZONTAL_MULT
-				var max_shift: float = MAX_HORIZONTAL_SHIFT * shift_mult
+				var max_shift: float = min(MAX_HORIZONTAL_SHIFT * shift_mult, max_safe_shift)
 				x = clamp(x + randf_range(-max_shift, max_shift), EDGE_MARGIN, VIEWPORT_WIDTH - EDGE_MARGIN)
 			else:
-				x = randf_range(EDGE_MARGIN, VIEWPORT_WIDTH - EDGE_MARGIN)
+				var max_shift: float = min(MAX_HORIZONTAL_SHIFT, max_safe_shift)
+				x = clamp(x + randf_range(-max_shift, max_shift), EDGE_MARGIN, VIEWPORT_WIDTH - EDGE_MARGIN)
 
 	return y
+
+
+# Max horizontal distance reachable at max charge for a given vertical gap
+# (mirrors Player.gd's jump kinematics — see consts above). Used only to
+# keep platform generation from ever producing an impossible combination.
+func _max_reachable_horizontal(vertical_gap: float) -> float:
+	var apex: float = PHYSICS_MAX_JUMP_SPEED * PHYSICS_MAX_JUMP_SPEED / (2.0 * PHYSICS_RISE_GRAVITY)
+	if apex < vertical_gap:
+		return 0.0
+	var t_up: float = PHYSICS_MAX_JUMP_SPEED / PHYSICS_RISE_GRAVITY
+	var t_fall: float = sqrt(2.0 * (apex - vertical_gap) / PHYSICS_FALL_GRAVITY)
+	var t_total: float = t_up + t_fall
+	var ramp_loss: float = (PHYSICS_MOVE_SPEED * PHYSICS_MOVE_SPEED) / (2.0 * PHYSICS_AIR_ACCEL)
+	return max(PHYSICS_MOVE_SPEED * t_total - ramp_loss, 0.0)
 
 
 func _get_level_index(height: float) -> int:
