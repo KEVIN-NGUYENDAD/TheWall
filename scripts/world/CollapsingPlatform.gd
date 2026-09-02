@@ -27,5 +27,5 @@ func _on_body_entered(body: Node) -> void:
 func _collapse() -> void:
 	collision.disabled = true
 	var tween: Tween = create_tween()
-	tween.tween_property(polygon, "modulate:a", 0.0, FADE_TIME)
+	tween.tween_property(self, "modulate:a", 0.0, FADE_TIME)
 	tween.tween_callback(queue_free)

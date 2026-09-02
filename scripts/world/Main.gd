@@ -24,6 +24,7 @@ const LEAF_SCENE: PackedScene = preload("res://scenes/world/Leaf.tscn")
 const SNOWFLAKE_SCENE: PackedScene = preload("res://scenes/world/Snowflake.tscn")
 const RAINDROP_SCENE: PackedScene = preload("res://scenes/world/RainDrop.tscn")
 const FLOWER_DECOR_SCENE: PackedScene = preload("res://scenes/world/FlowerDecor.tscn")
+const SNOW_PATCH_DECOR_SCENE: PackedScene = preload("res://scenes/world/SnowPatchDecor.tscn")
 const SEASON_BANNER_SCENE: PackedScene = preload("res://scenes/ui/SeasonBanner.tscn")
 const THUNDER_FLASH_SCENE: PackedScene = preload("res://scenes/world/ThunderFlash.tscn")
 
@@ -74,12 +75,31 @@ const SEASON_PLATFORM_MODULATE: Array = [
 	Color(0.82, 0.92, 1.0), Color(0.75, 0.8, 0.88),
 	Color(1.0, 0.97, 1.0), Color(1.0, 1.0, 0.9), Color(1.0, 0.85, 0.55),
 ]
+# True 2.5D Visual Pass: sky color and a full-screen color wash both tween
+# per season change, so the season reads at a glance without the HUD label
+# — this replaces Zone as the sky's color owner (Zone still tints
+# mountains/hills/near-clouds for depth). Purely cosmetic, no gameplay effect.
+const SEASON_SKY_COLOR: Array = [
+	Color(0.72, 0.85, 0.95), Color(0.42, 0.47, 0.55),
+	Color(0.55, 0.82, 0.95), Color(0.25, 0.65, 1.0), Color(0.85, 0.55, 0.35),
+]
+const SEASON_TINT_COLOR: Array = [
+	Color(0.75, 0.88, 1.0, 0.3), Color(0.35, 0.4, 0.5, 0.4),
+	Color(1.0, 0.85, 0.92, 0.16), Color(1.0, 0.95, 0.55, 0.16), Color(1.0, 0.5, 0.15, 0.3),
+]
+# Winter snow at least 5x denser than before (0.9 -> 0.18); Storm rain also
+# thickened up. Spring/Summer/Autumn intervals unchanged from prior passes.
 const WEATHER_INTERVAL: Dictionary = {
-	0: 0.9, 1: 0.35, 2: 4.8, 3: 0.0, 4: 1.0,
+	0: 0.18, 1: 0.15, 2: 4.8, 3: 0.0, 4: 1.0,
 }
-const THUNDER_INTERVAL_MIN: float = 6.0
-const THUNDER_INTERVAL_MAX: float = 14.0
+const THUNDER_INTERVAL_MIN: float = 5.0
+const THUNDER_INTERVAL_MAX: float = 11.0
 const FLOWER_CHANCE: float = 0.2
+const SNOW_PATCH_CHANCE: float = 0.2
+# Fog thickens with altitude; Winter also gets a flat mist boost regardless
+# of height for its own "sương trắng" identity.
+const FOG_HEIGHT_CAP_M: float = 900.0
+const FOG_WINTER_BOOST: float = 0.35
 
 # Difficulty modes: multipliers applied on top of the base level curve.
 # Balance Rework: rebuilt from scratch against Medium as the balanced 1.0
@@ -161,6 +181,8 @@ const CLOUD_DRIFT_RANGE: float = 620.0
 @onready var wind_layer: Node2D = $WindLayer
 @onready var season_banner = $SeasonBanner
 @onready var thunder_flash = $ThunderFlash
+@onready var fog_layer = $ParallaxBackground/FogLayer
+@onready var season_tint = $SeasonTint
 @onready var shop_screen = $ShopScreen
 @onready var rest_area_screen = $RestAreaScreen
 @onready var game_over_screen = $GameOverScreen
@@ -318,7 +340,10 @@ func _spawn_platform_variant(i: int, x: float, y: float, height: float) -> Dicti
 	if ptype == "normal":
 		if i > 0 and height >= SAFE_ZONE_HEIGHT_M and randf() < NEST_CHANCE:
 			_spawn_nest(Vector2(x, y - 40.0))
-		if _get_level_index(height) == 0 and randf() < FLOWER_CHANCE:
+		var deco_level: int = _get_level_index(height)
+		if deco_level == 0 and randf() < SNOW_PATCH_CHANCE:
+			_spawn_snow_patch(Vector2(x, y - 18.0))
+		elif deco_level == 2 and randf() < FLOWER_CHANCE:
 			_spawn_flower(Vector2(x, y - 20.0))
 
 	return {"node": platform, "type": ptype}
@@ -328,6 +353,12 @@ func _spawn_flower(pos: Vector2) -> void:
 	var flower: Node2D = FLOWER_DECOR_SCENE.instantiate()
 	flower.position = pos
 	add_child(flower)
+
+
+func _spawn_snow_patch(pos: Vector2) -> void:
+	var patch: Node2D = SNOW_PATCH_DECOR_SCENE.instantiate()
+	patch.position = pos
+	add_child(patch)
 
 
 func _get_zone_for_height(height: float) -> int:
@@ -354,12 +385,11 @@ func _check_zone_transition(height: float) -> void:
 		current_zone = zone
 		AudioManager.play("area_discovery")
 
-		var target_sky: Color = ZONE_SKY_COLORS[zone]
+		# Sky color is Season-owned (see _check_season_transition) so the sky
+		# always reads as "which season" rather than "which zone third" —
+		# Zone still tints mountains/hills/near-clouds for depth variety.
 		var tween: Tween = create_tween()
 		tween.set_parallel(true)
-		tween.tween_method(_set_sky_color, current_sky_color, target_sky, ZONE_TRANSITION_TIME)
-		current_sky_color = target_sky
-
 		for m in mountains:
 			tween.tween_property(m, "color", ZONE_MOUNTAIN_COLORS[zone], ZONE_TRANSITION_TIME)
 		for h in hills:
@@ -379,6 +409,13 @@ func _check_season_transition(height: float) -> void:
 	hud.set_season(SEASON_NAMES[level_idx])
 	_recompute_friction()
 	MusicManager.play_season(level_idx)
+
+	var tint_tween: Tween = create_tween()
+	tint_tween.tween_method(season_tint.set_tint, season_tint.color, SEASON_TINT_COLOR[level_idx], ZONE_TRANSITION_TIME)
+
+	var sky_tween: Tween = create_tween()
+	sky_tween.tween_method(_set_sky_color, current_sky_color, SEASON_SKY_COLOR[level_idx], ZONE_TRANSITION_TIME)
+	current_sky_color = SEASON_SKY_COLOR[level_idx]
 
 	var interval: float = WEATHER_INTERVAL.get(level_idx, 0.0)
 	if interval > 0.0 and not weather_blessing_active:
@@ -421,6 +458,13 @@ func _recompute_friction() -> void:
 		player.ground_friction_mult = SEASON_FRICTION_MULT[current_level_idx]
 	else:
 		player.ground_friction_mult = 1.0
+
+
+func _update_fog(height: float) -> void:
+	var value: float = clamp(height / FOG_HEIGHT_CAP_M, 0.0, 1.0)
+	if current_level_idx == 0:
+		value = clamp(value + FOG_WINTER_BOOST, 0.0, 1.0)
+	fog_layer.set_intensity(value)
 
 
 func _set_sky_color(color: Color) -> void:
@@ -749,10 +793,15 @@ func _on_weather_timer() -> void:
 
 func _spawn_weather_particle(level_idx: int) -> void:
 	var center: Vector2 = camera.get_screen_center_position()
+	if level_idx == 0:
+		# Layered snow: a far (small/slow/dim) and a near (big/fast/bright)
+		# flake spawned together for a true parallax-depth snowfall.
+		_spawn_snowflake(center, randf_range(0.5, 0.8))
+		_spawn_snowflake(center, randf_range(1.1, 1.6))
+		return
+
 	var scene: PackedScene = null
 	match level_idx:
-		0:
-			scene = SNOWFLAKE_SCENE
 		1:
 			scene = RAINDROP_SCENE
 		2:
@@ -772,6 +821,13 @@ func _spawn_weather_particle(level_idx: int) -> void:
 	add_child(particle)
 
 
+func _spawn_snowflake(center: Vector2, depth_mult: float) -> void:
+	var flake: Node2D = SNOWFLAKE_SCENE.instantiate()
+	flake.depth_mult = depth_mult
+	flake.position = Vector2(randf_range(center.x - 260.0, center.x + 260.0), center.y - 500.0)
+	add_child(flake)
+
+
 func _on_thunder_timer() -> void:
 	if not is_dead and current_level_idx == STORM_LEVEL_IDX and not weather_blessing_active:
 		thunder_flash.flash()
@@ -781,6 +837,7 @@ func _on_thunder_timer() -> void:
 func _process(delta: float) -> void:
 	_update_cloud_drift(delta)
 	wind_layer.global_position = camera.get_screen_center_position() - Vector2(VIEWPORT_WIDTH / 2.0, 480.0)
+	season_tint.global_position = camera.get_screen_center_position()
 
 	if is_dead:
 		return
@@ -800,6 +857,7 @@ func _process(delta: float) -> void:
 	_check_zone_transition(height)
 	_check_season_transition(height)
 	_update_session_snapshot(height)
+	_update_fog(height)
 
 	if not tutorial_hidden and SaveManager.data.stats.total_jumps > 0:
 		hud.hide_tutorial_hint()
