@@ -58,3 +58,19 @@ Git Tags:
 Local Backup:
 - Desktop/TheWall_Alpha_v1.0.zip
 - Backups/TheWall_Alpha_v1_Backup.zip (this session, excludes .git/.godot/.import/.netlify)
+
+==================================================
+CLAUDE BOOT RULE
+==================================================
+
+Claude phải đọc docs/CLAUDE_RULES.md trước mọi task.
+
+Mọi bug phải được xử lý bằng số lượng file tối thiểu.
+
+Không scan toàn bộ repository nếu không thực sự cần thiết.
+
+Ưu tiên:
+- root cause analysis
+- targeted fixes
+- minimal validation
+- short reports
